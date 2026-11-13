@@ -1,0 +1,13 @@
+{
+  "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "access_mode": "public",
+  "access_verified_by": "Sites update_site_access response",
+  "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
+  "site_version": 1,
+  "site_source_commit": "a6a16185a447cdffadb1ff2c4473bdb672a1ca01",
+  "site_deployment_id": "appgdep_6af7a02b9cf48191a81a88e2484574c0",
+  "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
+  "model_sha256": "33fd1b45032765e264dd66a3ceb239544ac20b59e77e69659f23ae6a66718072",
+  "live_browser_verified": true,
+  "command_line_probe_status": 403
+}

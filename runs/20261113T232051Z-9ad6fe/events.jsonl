@@ -1,0 +1,26 @@
+{"time": "2026-11-13T23:20:51.647979+00:00", "message": "Teacher qualified: 5,478 reachable states; 4520 decision states in 627 symmetry orbits. Gradient check 8.4e-12."}
+{"time": "2026-11-13T23:20:52.119606+00:00", "message": "Shared founder saved. Seeds 11 / 23 / 37 start from the same tensors with fresh Adam state."}
+{"time": "2026-11-13T23:20:52.143566+00:00", "message": "Phase 1, seed 11: saved literal schedule; 193 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:20:52.220969+00:00", "message": "Training paused at an update boundary."}
+{"time": "2026-11-13T23:21:33.028306+00:00", "message": "Training resumed."}
+{"time": "2026-11-13T23:21:33.231153+00:00", "message": "s11-p1: validation 437/443; repairs 2, breaks 1 versus founder."}
+{"time": "2026-11-13T23:21:33.248567+00:00", "message": "Phase 1, seed 23: saved literal schedule; 191 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:33.587875+00:00", "message": "s23-p1: validation 438/443; repairs 3, breaks 1 versus founder."}
+{"time": "2026-11-13T23:21:33.613626+00:00", "message": "Phase 1, seed 37: saved literal schedule; 195 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:33.904247+00:00", "message": "s37-p1: validation 439/443; repairs 3, breaks 0 versus founder."}
+{"time": "2026-11-13T23:21:33.922270+00:00", "message": "Phase 2, seed 11: saved literal schedule; 192 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:34.208144+00:00", "message": "s11-p2: validation 438/443; repairs 3, breaks 1 versus founder."}
+{"time": "2026-11-13T23:21:34.225938+00:00", "message": "Phase 2, seed 23: saved literal schedule; 218 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:34.501528+00:00", "message": "s23-p2: validation 437/443; repairs 2, breaks 1 versus founder."}
+{"time": "2026-11-13T23:21:34.517944+00:00", "message": "Phase 2, seed 37: saved literal schedule; 202 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:34.790331+00:00", "message": "s37-p2: validation 439/443; repairs 3, breaks 0 versus founder."}
+{"time": "2026-11-13T23:21:34.808624+00:00", "message": "Phase 3, seed 11: saved literal schedule; 204 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:35.069696+00:00", "message": "s11-p3: validation 439/443; repairs 3, breaks 0 versus founder."}
+{"time": "2026-11-13T23:21:35.089570+00:00", "message": "Phase 3, seed 23: saved literal schedule; 214 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:35.381482+00:00", "message": "s23-p3: validation 438/443; repairs 3, breaks 1 versus founder."}
+{"time": "2026-11-13T23:21:35.397727+00:00", "message": "Phase 3, seed 37: saved literal schedule; 198 native actions, 0 TRAIN errors targeted."}
+{"time": "2026-11-13T23:21:35.658080+00:00", "message": "s37-p3: validation 439/443; repairs 4, breaks 1 versus founder."}
+{"time": "2026-11-13T23:21:35.661579+00:00", "message": "Selected s37-p3 and sealed its tensor identity before TEST."}
+{"time": "2026-11-13T23:21:35.669998+00:00", "message": "Sealed TEST: 411/450 optimal. Exhaustive: 4463/4520. No post-test tuning."}
+{"time": "2026-11-13T23:21:37.215620+00:00", "message": "Independent exhaustive audit matched. Worst case from empty: X draw, O loss. Browser logits/actions parity checked."}
+{"time": "2026-11-13T23:21:37.220704+00:00", "message": "Training complete. Neural-only portable student ready; all raw-final and selected checkpoints retained."}

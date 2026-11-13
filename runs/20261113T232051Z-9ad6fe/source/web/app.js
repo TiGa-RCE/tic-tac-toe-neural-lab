@@ -1,0 +1,320 @@
+import { predict, chooseMove, outcome } from './network.js';
+
+const $ = id => document.getElementById(id);
+const escape = value => String(value ?? '').replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const pretty = key => String(key).replace(/_/g, ' ').replace(/\b\w/g, ch => ch.toUpperCase());
+const finite = value => typeof value === 'number' && Number.isFinite(value);
+const percent = value => finite(value) ? `${(value * 100).toFixed(1)}%` : '—';
+const number = value => finite(value) ? value.toLocaleString(undefined, {maximumFractionDigits: 5}) : String(value ?? '—');
+const format = (key, value) => /accuracy|rate|agreement|coverage|fraction/.test(key) && finite(value) && value >= 0 && value <= 1 ? percent(value) : typeof value === 'boolean' ? (value ? 'Yes' : 'No') : number(value);
+let latestStatus = null;
+let requestBusy = false;
+let polling = false;
+let gameModel = null;
+let board = Array(9).fill(0);
+let humanSide = 1;
+let thinking = false;
+let loadingGame = false;
+let gameToken = 0;
+let oracle = null;
+let oracleBoard = '';
+let disconnected = false;
+
+function showError(message) {
+  $('error').textContent = message;
+  $('error').hidden = !message;
+}
+
+async function api(path, options = {}) {
+  const response = await fetch(path, {
+    cache: 'no-store',
+    signal: AbortSignal.timeout(10000),
+    ...options,
+    headers: {'Content-Type': 'application/json', ...options.headers},
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.error?.message || data.error || `Request failed (${response.status}).`);
+  return data;
+}
+
+function phaseMarkup(phase, index) {
+  const active = phase.status === 'running' || (latestStatus.phase_id === phase.id && ['running', 'paused'].includes(latestStatus.status));
+  const completed = phase.status === 'completed';
+  const progress = finite(phase.progress) ? Math.max(0, Math.min(1, phase.progress)) : completed ? 1 : 0;
+  const metrics = Object.entries(phase.metrics || {}).filter(([, v]) => v !== null && typeof v !== 'object').slice(0, 5);
+  return `<article class="phase ${active ? 'active' : ''} ${completed ? 'completed' : ''} ${phase.status === 'failed' ? 'failed' : ''}" ${active ? 'aria-current="step"' : ''}>
+    <div class="phase-index">${completed ? '✓' : String(index + 1).padStart(2, '0')}</div>
+    <div><h3>${escape(phase.title || pretty(phase.id))}</h3><p>${escape(phase.detail || '')}</p>
+      ${metrics.length ? `<div class="phase-metrics">${metrics.map(([k,v]) => `<span>${escape(pretty(k))}: ${escape(format(k,v))}</span>`).join('')}</div>` : ''}
+      ${active ? `<div class="progress-track" role="progressbar" aria-label="${escape(phase.title)}" aria-valuenow="${Math.round(progress * 100)}" aria-valuemin="0" aria-valuemax="100"><span style="width:${progress * 100}%"></span></div>` : ''}
+    </div><div class="phase-percent">${completed ? 'DONE' : active ? `${Math.round(progress * 100)}%` : phase.status === 'failed' ? 'FAIL' : '—'}</div>
+  </article>`;
+}
+
+function flattenEvidence(object, prefix = '', depth = 0) {
+  const entries = [];
+  for (const [key, value] of Object.entries(object || {})) {
+    const label = prefix ? `${prefix} / ${pretty(key)}` : pretty(key);
+    if (value === null || value === undefined) continue;
+    if (Array.isArray(value)) {
+      if (value.every(v => typeof v !== 'object')) entries.push([key, label, value.join(', ')]);
+      else if (value.length) entries.push([key, label, JSON.stringify(value)]);
+    } else if (typeof value === 'object' && depth < 2) entries.push(...flattenEvidence(value, label, depth + 1));
+    else entries.push([key, label, value]);
+  }
+  return entries;
+}
+
+function renderEvidence(status) {
+  const results = flattenEvidence(status.evaluation).slice(0, 36);
+  $('evaluation').innerHTML = results.length ? results.map(([key, label, value]) => `<div class="evidence-item ${String(value).length > 48 ? 'wide' : ''}"><span>${escape(label)}</span><strong>${escape(format(key,value))}</strong></div>`).join('') : '<p class="muted">Qualification results will appear after evaluation.</p>';
+  const dataset = flattenEvidence(status.dataset).slice(0, 24);
+  $('dataset').innerHTML = dataset.map(([key, label, value]) => `<div><span>${escape(label)}</span><strong>${escape(format(key,value))}</strong></div>`).join('');
+  $('recipe-note').textContent = status.recipe_note || 'The exact teacher generates labels; held-out evaluation and full-domain qualification are reported separately.';
+}
+
+function renderCandidates(status) {
+  const candidates = Array.isArray(status.candidates) ? status.candidates : [];
+  $('candidates-panel').hidden = candidates.length === 0;
+  $('candidate-count').textContent = `${candidates.length} SAVED`;
+  const selected = status.selection?.checkpoint || status.evaluation?.selected_checkpoint;
+  $('candidates').innerHTML = candidates.map(candidate => {
+    const chosen = candidate.checkpoint === selected;
+    const fraction = finite(candidate.validation_correct) && finite(candidate.validation_count) ? `${candidate.validation_correct} / ${candidate.validation_count}` : '—';
+    return `<tr class="${chosen ? 'selected' : ''}"><th scope="row">${escape(candidate.checkpoint)}${chosen ? '<span class="selected-label">SELECTED</span>' : ''}</th><td>${escape(fraction)}</td><td class="repair-count">${escape(number(candidate.repairs))}</td><td class="${candidate.breaks ? 'break-count' : ''}">${escape(number(candidate.breaks))}</td></tr>`;
+  }).join('');
+}
+
+function renderControls() {
+  const state = latestStatus?.status || 'idle';
+  const active = ['running', 'paused', 'starting'].includes(state);
+  $('start').disabled = active || requestBusy || disconnected;
+  $('pause').hidden = state === 'paused';
+  $('pause').disabled = state !== 'running' || requestBusy || disconnected;
+  $('resume').hidden = state !== 'paused';
+  $('resume').disabled = state !== 'paused' || requestBusy || disconnected;
+  $('stop').disabled = !active || requestBusy || disconnected;
+  $('seed').disabled = active || requestBusy;
+}
+
+function renderStatus(status) {
+  latestStatus = status;
+  const state = status.status || 'idle';
+  $('run-status').textContent = pretty(state);
+  $('run-status').className = `status-pill ${state}`;
+  $('run-id').textContent = status.run_id || 'No run yet';
+  const arch = status.architecture;
+  if (Array.isArray(arch)) $('architecture').innerHTML = arch.map(escape).join(' <span>→</span> ');
+  if (finite(status.parameter_count)) $('parameter-count').textContent = status.parameter_count.toLocaleString();
+  if (Array.isArray(status.phases) && status.phases.length) $('phases').innerHTML = status.phases.map(phaseMarkup).join('');
+  const metrics = status.metrics || {};
+  $('loss').textContent = finite(metrics.loss) ? metrics.loss.toFixed(4) : '—';
+  $('train-accuracy').textContent = percent(metrics.train_accuracy);
+  $('validation-accuracy').textContent = percent(metrics.val_accuracy ?? metrics.validation_accuracy);
+  $('epoch-label').textContent = finite(metrics.epoch) ? `Update ${number(metrics.epoch)}${metrics.branch !== null && metrics.branch !== undefined ? ` · seed ${number(metrics.branch)}` : ' · founder'}` : finite(metrics.step) ? `Update ${number(metrics.step)}` : 'No updates recorded';
+  const events = Array.isArray(status.events) ? status.events : [];
+  if (events.length) $('events').innerHTML = events.slice(-18).reverse().map(event => {
+    let time = event.time;
+    if (finite(time)) time = new Date(time < 1e12 ? time * 1000 : time);
+    else time = new Date(time);
+    const label = Number.isNaN(time.getTime()) ? '·' : time.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+    return `<li><time>${escape(label)}</time><span>${escape(event.message || event.text || '')}</span></li>`;
+  }).join('');
+  renderEvidence(status);
+  renderCandidates(status);
+  drawChart(status.history || []);
+  renderControls();
+  if (!gameModel && status.model_available && !loadingGame) newGame();
+}
+
+function drawChart(history) {
+  const canvas = $('chart');
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
+  if (!width || !height) return;
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  canvas.width = width * dpr;
+  canvas.height = height * dpr;
+  const ctx = canvas.getContext('2d');
+  ctx.scale(dpr, dpr);
+  const pad = {left:35, right:34, top:10, bottom:25};
+  const w = width - pad.left - pad.right;
+  const h = height - pad.top - pad.bottom;
+  ctx.font = '9px ui-monospace,monospace';
+  ctx.lineWidth = 1;
+  ctx.strokeStyle = '#2b3530';
+  ctx.fillStyle = '#788c7e';
+  for (let i = 0; i <= 4; i++) {
+    const y = pad.top + h * i / 4;
+    ctx.beginPath();ctx.moveTo(pad.left,y);ctx.lineTo(width-pad.right,y);ctx.stroke();
+    ctx.textAlign = 'left';ctx.fillText(`${100-i*25}%`, width-pad.right+7,y+3);
+  }
+  const points = history.filter(p => finite(p.loss) || finite(p.train_accuracy) || finite(p.val_accuracy));
+  $('chart-empty').hidden = points.length > 0;
+  if (!points.length) return;
+  const steps = points.map((p,i) => finite(p.step) ? p.step : i);
+  const minStep = Math.min(...steps), maxStep = Math.max(...steps);
+  const maxLoss = Math.max(0.01, ...points.filter(p => finite(p.loss)).map(p => p.loss)) * 1.08;
+  for (let i = 0; i <= 2; i++) {
+    ctx.textAlign = 'right';ctx.fillStyle = '#b28d70';
+    ctx.fillText((maxLoss * (1-i/2)).toFixed(2), pad.left-7, pad.top+h*i/2+3);
+  }
+  const phaseNames = {founder:'Founder', phase1:'Phase 1', phase2:'Phase 2', phase3:'Phase 3'};
+  let previousPhase = null;
+  points.forEach((point, index) => {
+    const previous = points[index - 1];
+    if (previous && (point.branch !== previous.branch || point.phase !== previous.phase)) {
+      const x = pad.left + w * ((steps[index] + steps[index - 1]) / 2 - minStep) / Math.max(1, maxStep - minStep);
+      ctx.save();ctx.setLineDash([2, 4]);ctx.strokeStyle = '#62746666';ctx.lineWidth = 1;
+      ctx.beginPath();ctx.moveTo(x, pad.top);ctx.lineTo(x, pad.top + h);ctx.stroke();ctx.restore();
+    }
+    if (point.phase !== previousPhase) {
+      const x = pad.left + w * (steps[index] - minStep) / Math.max(1, maxStep - minStep);
+      ctx.fillStyle = '#84998b';ctx.textAlign = 'left';
+      ctx.fillText(phaseNames[point.phase] || point.phase, x + 3, pad.top + 9);
+      previousPhase = point.phase;
+    }
+  });
+  const lines = [['loss','#eab388',maxLoss],['train_accuracy','#b8edcb',1],['val_accuracy','#c4b3eb',1]];
+  for (const [key,color,max] of lines) {
+    ctx.strokeStyle = color;ctx.lineWidth = 1.8;ctx.beginPath();
+    let started = false;
+    points.forEach((point,index) => {
+      if (!finite(point[key])) {started=false;return;}
+      const x = pad.left + w * (steps[index]-minStep) / Math.max(1,maxStep-minStep);
+      const y = pad.top + h * (1-Math.max(0,Math.min(max,point[key]))/max);
+      const previous = points[index-1];
+      if (!started || (previous && (point.branch !== previous.branch || point.phase !== previous.phase))) ctx.moveTo(x,y);else ctx.lineTo(x,y);
+      started=true;
+    });
+    ctx.stroke();
+    if (points.length===1 && finite(points[0][key])) {
+      ctx.fillStyle=color;ctx.beginPath();ctx.arc(pad.left,pad.top+h*(1-points[0][key]/max),2,0,Math.PI*2);ctx.fill();
+    }
+  }
+  ctx.fillStyle='#788c7e';ctx.textAlign='left';ctx.fillText(String(minStep),pad.left,height-5);
+  ctx.textAlign='right';ctx.fillText(`${maxStep} steps`,width-pad.right,height-5);
+}
+
+async function poll() {
+  if (polling) return;
+  polling = true;
+  try {
+    const data = await api('/api/status');
+    disconnected = false;
+    $('connection').textContent = 'Local trainer connected';
+    $('connection-dot').className = 'dot online';
+    renderStatus(data);
+  } catch (error) {
+    disconnected = true;
+    $('connection').textContent = 'Trainer disconnected';
+    $('connection-dot').className = 'dot offline';
+    renderControls();
+  } finally {polling = false;}
+}
+
+async function trainingAction(path, body) {
+  if (requestBusy) return;
+  requestBusy = true;showError('');renderControls();
+  try {await api(path, {method:'POST', body:JSON.stringify(body)});await poll();}
+  catch(error) {showError(error.message);}
+  finally {requestBusy=false;renderControls();}
+}
+
+function currentPlayer() {return board.filter(v=>v===1).length === board.filter(v=>v===-1).length ? 1 : -1;}
+function policyProbabilities(logits, cells) {
+  const legal = cells.map((v,i)=>v===0?i:-1).filter(i=>i>=0);
+  const max = Math.max(...legal.map(i=>logits[i]));
+  const values=logits.map((v,i)=>cells[i]===0?Math.exp(v-max):0);
+  const sum=values.reduce((a,b)=>a+b,0);
+  return values.map(v=>sum?v/sum:0);
+}
+
+function renderGame() {
+  const result=outcome(board);
+  let probabilities=null,best=null;
+  if(gameModel && result===null) {
+    try {probabilities=policyProbabilities(predict(gameModel,board),board);best=chooseMove(gameModel,board);}
+    catch(error) {showError(error.message);}
+  }
+  const showScores=$('show-scores').checked;
+  const showTeacher=$('teacher-overlay').checked && oracle && oracleBoard===board.join(',');
+  $('board').innerHTML=board.map((value,index)=>{
+    const disabled=!gameModel || loadingGame || thinking || result!==null || value!==0 || currentPlayer()!==humanSide;
+    const label=value===1?'X':value===-1?'O':'Empty';
+    const probability=probabilities?.[index];
+    return `<button class="cell ${value===1?'mark-x':value===-1?'mark-o':'empty'} ${index===best?'best':''} ${showTeacher && oracle.optimal_moves.includes(index)?'teacher-optimal':''}" data-cell="${index}" aria-label="Row ${Math.floor(index/3)+1}, column ${index%3+1}: ${label}${value===0&&probabilities?`, policy probability ${percent(probability)}`:''}" ${disabled?'disabled':''}>
+      <span class="cell-number" aria-hidden="true">${index+1}</span>${value===1?'×':value===-1?'○':''}${!value&&showScores&&probabilities?`<span class="score">${percent(probability)}</span>`:''}${!value&&index===best&&showScores?'<span class="score-caption">TOP</span>':''}</button>`;
+  }).join('');
+  $('human-symbol').textContent=`Playing ${humanSide===1?'X':'O'}`;
+  $('network-symbol').textContent=`Playing ${humanSide===1?'O':'X'}`;
+  document.querySelector('.player-symbol.human').textContent=humanSide===1?'×':'○';
+  document.querySelector('.player-symbol.neural').textContent=humanSide===1?'○':'×';
+  $('game-status').textContent=loadingGame?'Loading latest checkpoint…':!gameModel?'Waiting for a trained checkpoint':result!==null?(result===0?'A draw. Well played.':result===humanSide?'You won this game.':'The student wins this round.'):thinking?'The student is choosing…':currentPlayer()===humanSide?'Your turn. Pick a cell.':"The student's turn.";
+  $('checkpoint').textContent=gameModel?`${gameModel.checkpoint || 'Saved weights'}${gameModel.run_id?` · ${gameModel.run_id}`:''}`:'No model loaded';
+  $('export').disabled=!gameModel;
+  $('new-game').disabled=loadingGame;
+  $('teacher-note').hidden=!$('teacher-overlay').checked;
+  if($('teacher-overlay').checked) $('teacher-note').textContent=showTeacher?(result===null?`Teacher value: ${oracle.value===1?'forced win':oracle.value===-1?'forced loss':'draw with perfect play'}. Outlined cells are optimal. Displayed probabilities are the network’s policy, not win chances.`:'Game over. The teacher is only an observer.'):'Comparing this position with the teacher…';
+}
+
+async function updateOracle() {
+  if(!$('teacher-overlay').checked || !gameModel) return;
+  const key=board.join(',');
+  try {
+    const data=await api(`/api/oracle?board=${key}`);
+    if(key===board.join(',') && $('teacher-overlay').checked) {oracle=data;oracleBoard=key;renderGame();}
+  } catch(error) {$('teacher-note').textContent=`Teacher comparison unavailable: ${error.message}`;}
+}
+
+function advanceStudent(token) {
+  if(!gameModel || outcome(board)!==null || currentPlayer()===humanSide) return;
+  thinking=true;renderGame();
+  setTimeout(()=>{
+    if(token!==gameToken) return;
+    try {
+      const move=chooseMove(gameModel,board);
+      if(move!==null) board[move]=currentPlayer();
+    } catch(error) {showError(error.message);}
+    thinking=false;oracle=null;renderGame();updateOracle();
+  },260);
+}
+
+async function newGame() {
+  const token=++gameToken;
+  thinking=false;loadingGame=true;oracle=null;board=Array(9).fill(0);humanSide=Number($('side').value);renderGame();
+  try {
+    const model=await api('/api/model');
+    if(token!==gameToken) return;
+    predict(model,board);
+    gameModel=model;
+  } catch(error) {if(!gameModel) showError(`No playable checkpoint yet. ${error.message}`);else showError(`Keeping the last loaded checkpoint: ${error.message}`);}
+  finally {
+    if(token===gameToken) {loadingGame=false;renderGame();updateOracle();advanceStudent(token);}
+  }
+}
+
+$('start').addEventListener('click',()=>{
+  const seed=Number($('seed').value);
+  if(!Number.isInteger(seed)||seed<0||seed>2147483647) {showError('Choose an integer seed from 0 to 2,147,483,647.');return;}
+  trainingAction('/api/train',{seed});
+});
+for(const action of ['pause','resume','stop']) $(action).addEventListener('click',()=>trainingAction('/api/control',{action}));
+$('new-game').addEventListener('click',newGame);
+$('side').addEventListener('change',newGame);
+$('show-scores').addEventListener('change',renderGame);
+$('teacher-overlay').addEventListener('change',()=>{renderGame();updateOracle();});
+$('board').addEventListener('click',event=>{
+  const cell=event.target.closest('[data-cell]');
+  if(!cell || cell.disabled || thinking || !gameModel || outcome(board)!==null || currentPlayer()!==humanSide) return;
+  const move=Number(cell.dataset.cell);
+  if(board[move]) return;
+  board[move]=humanSide;oracle=null;renderGame();updateOracle();advanceStudent(gameToken);
+});
+$('export').addEventListener('click',()=>{
+  if(!gameModel) return;
+  const url=URL.createObjectURL(new Blob([JSON.stringify(gameModel,null,2)],{type:'application/json'}));
+  const link=document.createElement('a');link.href=url;link.download='tic-tac-toe-student.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
+});
+window.addEventListener('resize',()=>drawChart(latestStatus?.history || []));
+renderGame();renderControls();poll();setInterval(poll,1000);

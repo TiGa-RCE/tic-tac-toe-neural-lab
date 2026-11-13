@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101414">
+  <title>Three in a Row · Neural Training Lab</title>
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <div class="shell">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Three in a Row home"><span class="brand-mark" aria-hidden="true">✳</span> FIELDNOTES <span class="brand-divider">/</span> <span class="brand-sub">NEURAL LAB</span></a>
+      <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection">Connecting to trainer</span></div>
+    </header>
+    <main>
+      <section class="intro" aria-labelledby="page-title">
+        <div><div class="eyebrow">EXPERIMENT 01 <span>—</span> SOLVER → STUDENT</div><h1 id="page-title">Three in a row.<br><em>Learned, move by move.</em></h1><p class="lede">An exact teacher. A small neural network. Watch the recipe unfold, then take a seat across the board.</p></div>
+        <div class="architecture"><span class="micro">THE STUDENT</span><div id="architecture">27 <span>→</span> 64 <span>→</span> 64 <span>→</span> 9</div><p><strong id="parameter-count">6,537</strong> trainable parameters</p><span class="tag">LOCAL INFERENCE</span></div>
+      </section>
+      <div id="error" class="notice error" role="alert" hidden></div>
+      <div id="runtime-banner" class="runtime-banner" hidden><span id="runtime-note">Published game and training archive</span><a id="repository-link" href="#" target="_blank" rel="noopener" hidden>Source, weights & evidence on GitHub ↗</a></div>
+      <div class="workspace">
+        <section class="training-column" aria-labelledby="training-title">
+          <div class="section-heading"><div><span class="micro">01 / TRAINING</span><h2 id="training-title">The learning process</h2></div><span class="status-pill" id="run-status">Idle</span></div>
+          <div class="panel control-panel">
+            <div class="run-line"><div><span class="micro">CURRENT RUN</span><div id="run-id" class="mono muted">No run yet</div></div><label class="seed-label">Seed <input id="seed" type="number" value="42" min="0" max="2147483647" step="1" aria-label="Training seed"></label></div>
+            <div class="actions"><button id="start" class="primary">Start training <span aria-hidden="true">↗</span></button><button id="pause">Pause</button><button id="resume" hidden>Resume</button><button id="stop" class="quiet">Stop</button></div>
+            <p id="training-note" class="caption">Shared founder → three refinement phases → sealed qualification. Every phase reports real measurements.</p>
+            <div class="hosted-actions"><button id="published-run" class="text-button" hidden>View published run</button><button id="download-run" class="text-button" hidden>Download browser run evidence ↓</button></div>
+          </div>
+          <div id="phases" class="phase-list" aria-label="Training phases"><div class="empty panel">Waiting for the training recipe…</div></div>
+          <div class="panel curve-panel">
+            <div class="panel-heading"><h3>Learning curves</h3><span id="epoch-label" class="mono muted">No updates recorded</span></div>
+            <div class="chart-legend"><span><i class="legend-line loss"></i>Loss</span><span><i class="legend-line train"></i>Train optimal move</span><span id="validation-legend"><i class="legend-line validation"></i>Validation optimal move</span></div>
+            <div class="chart-wrap"><canvas id="chart" aria-label="Actual loss and optimal move accuracy over training steps" role="img"></canvas><p id="chart-empty">Curves appear as measurements arrive.</p></div>
+            <p class="chart-note">Gaps separate seed branches and phases. The horizontal axis totals optimizer updates across branches.</p>
+            <div class="metric-strip"><div><span>LATEST LOSS</span><strong id="loss">—</strong></div><div><span id="train-metric-label">LATEST TRAIN</span><strong id="train-accuracy">—</strong></div><div><span id="validation-metric-label">LATEST VALIDATION</span><strong id="validation-accuracy">—</strong></div></div>
+          </div>
+          <section id="candidates-panel" class="panel candidates-panel" hidden aria-labelledby="candidates-title">
+            <div class="panel-heading"><h3 id="candidates-title">Checkpoint comparison</h3><span id="candidate-count" class="micro"></span></div>
+            <div class="table-wrap"><table><thead><tr><th scope="col">Checkpoint</th><th scope="col" id="candidate-metric-heading">Validation</th><th scope="col">Repairs</th><th scope="col">Breaks</th></tr></thead><tbody id="candidates"></tbody></table></div>
+            <p class="caption" id="candidate-note">Measured against the shared founder on validation: repairs turn wrong moves correct; breaks turn correct moves wrong. Selection is frozen before TEST.</p>
+          </section>
+          <div class="panel audit-panel"><div class="panel-heading"><h3>Qualification & evidence</h3><span class="micro">MEASURED</span></div><div id="evaluation" class="evidence-grid"><p class="muted">Qualification results will appear after evaluation.</p></div><details><summary>Dataset & recipe</summary><div id="dataset" class="detail-grid"></div><p id="recipe-note" class="caption"></p></details></div>
+          <div class="panel log-panel"><div class="panel-heading"><h3>Run journal</h3><span class="micro" id="journal-label">LIVE</span></div><ol id="events"><li class="muted">Waiting for the first event.</li></ol></div>
+        </section>
+        <aside class="play-column" aria-labelledby="play-title">
+          <div class="section-heading"><div><span class="micro">02 / PLAY</span><h2 id="play-title">Meet the student</h2></div><span class="play-icon" aria-hidden="true">× ○</span></div>
+          <section class="panel game-panel">
+            <div class="players"><div><span class="player-symbol human">×</span><div><strong>You</strong><small id="human-symbol">Playing X</small></div></div><span class="versus">VS</span><div><span class="player-symbol neural">○</span><div><strong>Neural network</strong><small id="network-symbol">Playing O</small></div></div></div>
+            <div id="game-status" class="game-status" role="status" aria-live="polite">Waiting for a trained checkpoint</div>
+            <p id="play-proof" class="play-proof" hidden></p>
+            <div id="board" class="board" aria-label="Tic-tac-toe board"></div>
+            <div class="game-controls"><label>You play <select id="side" aria-label="Choose your side"><option value="1">X · first</option><option value="-1">O · second</option></select></label><button id="new-game">New game <span aria-hidden="true">↻</span></button></div>
+            <label class="toggle"><input type="checkbox" id="show-scores" checked><span>Show policy probabilities</span></label><label class="toggle"><input type="checkbox" id="teacher-overlay"><span>Compare with the exact teacher</span></label><p id="teacher-note" class="teacher-note" hidden></p>
+            <div class="checkpoint"><span class="micro">GAME CHECKPOINT</span><strong id="checkpoint">No model loaded</strong><p>Weights stay fixed during a game. New game loads the latest saved checkpoint.</p></div>
+            <button id="export" class="text-button" disabled>Download these weights <span aria-hidden="true">↓</span></button>
+          </section>
+          <section class="how-it-works"><span class="micro">WHAT MAKES THE MOVE?</span><p>The student scores the nine cells in one forward pass. Occupied cells are masked; the highest legal policy score chooses the move.</p><p>The deterministic solver supplies training labels and audits. It is never called to choose the student's move.</p><div class="flow"><span>Board</span><b>→</b><span>Network</span><b>→</b><span>Move</span></div></section>
+        </aside>
+      </div>
+    </main>
+    <footer><span>THREE IN A ROW / NEURAL TRAINING LAB</span><span>Exact supervision. Measured progress.</span></footer>
+  </div>
+</body>
+</html>

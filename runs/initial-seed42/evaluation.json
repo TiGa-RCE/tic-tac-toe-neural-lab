@@ -1,0 +1,1 @@
+{"test":{"accuracy":0.9133333333333333,"correct":411,"count":450,"loss":0.20183244395718097},"exhaustive":{"correct":4465,"count":4520,"accuracy":0.9878318584070797,"mistakes":55},"scope":"TEST is symmetry-disjoint. Exhaustive coverage includes training positions; it is not another held-out test.","selected_checkpoint":"s37-p3"}

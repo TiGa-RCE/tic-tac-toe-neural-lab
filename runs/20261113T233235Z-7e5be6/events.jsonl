@@ -1,0 +1,29 @@
+{"time": "2026-11-13T23:32:35.365588+00:00", "message": "All 4,520 decision states explicitly admitted as TRAIN. Old held-out evidence is preserved, not reused as a fresh test."}
+{"time": "2026-11-13T23:32:35.384913+00:00", "message": "Frozen selected parent: 4463/4,520 optimal; X draw, O loss."}
+{"time": "2026-11-13T23:32:35.410515+00:00", "message": "Phase 1, seed 11: saved schedule; 318 native actions, 57 errors and 1 adversarial critical states."}
+{"time": "2026-11-13T23:32:35.683177+00:00", "message": "s11-p1: 4506/4,520 optimal; repairs 43, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:35.707243+00:00", "message": "Phase 1, seed 23: saved schedule; 317 native actions, 57 errors and 1 adversarial critical states."}
+{"time": "2026-11-13T23:32:35.974817+00:00", "message": "s23-p1: 4504/4,520 optimal; repairs 41, breaks 0; X draw, O loss."}
+{"time": "2026-11-13T23:32:35.997549+00:00", "message": "Phase 1, seed 37: saved schedule; 269 native actions, 57 errors and 1 adversarial critical states."}
+{"time": "2026-11-13T23:32:36.265461+00:00", "message": "s37-p1: 4504/4,520 optimal; repairs 41, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:36.287939+00:00", "message": "Phase 2, seed 11: saved schedule; 258 native actions, 14 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:36.545736+00:00", "message": "s11-p2: 4517/4,520 optimal; repairs 54, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:36.568251+00:00", "message": "Phase 2, seed 23: saved schedule; 275 native actions, 16 errors and 1 adversarial critical states."}
+{"time": "2026-11-13T23:32:36.819407+00:00", "message": "s23-p2: 4517/4,520 optimal; repairs 54, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:36.840933+00:00", "message": "Phase 2, seed 37: saved schedule; 278 native actions, 16 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:37.105428+00:00", "message": "s37-p2: 4517/4,520 optimal; repairs 54, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:37.129654+00:00", "message": "Phase 3, seed 11: saved schedule; 291 native actions, 3 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:37.389975+00:00", "message": "s11-p3: 4518/4,520 optimal; repairs 55, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:37.412356+00:00", "message": "Phase 3, seed 23: saved schedule; 270 native actions, 3 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:37.671825+00:00", "message": "s23-p3: 4519/4,520 optimal; repairs 56, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:37.694939+00:00", "message": "Phase 3, seed 37: saved schedule; 280 native actions, 3 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:37.959677+00:00", "message": "s37-p3: 4519/4,520 optimal; repairs 56, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:37.984305+00:00", "message": "Phase 4, seed 11: saved schedule; 295 native actions, 2 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:38.245087+00:00", "message": "s11-p4: 4520/4,520 optimal; repairs 57, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:38.267389+00:00", "message": "Phase 4, seed 23: saved schedule; 298 native actions, 1 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:38.526308+00:00", "message": "s23-p4: 4520/4,520 optimal; repairs 57, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:38.549815+00:00", "message": "Phase 4, seed 37: saved schedule; 259 native actions, 1 errors and 0 adversarial critical states."}
+{"time": "2026-11-13T23:32:38.844033+00:00", "message": "s37-p4: 4520/4,520 optimal; repairs 57, breaks 0; X draw, O draw."}
+{"time": "2026-11-13T23:32:38.845092+00:00", "message": "Complete finite-domain mastery reached after phase 4; no further optimizer update is needed."}
+{"time": "2026-11-13T23:32:38.847303+00:00", "message": "Frozen s11-p4 before independent export qualification."}
+{"time": "2026-11-13T23:32:40.441338+00:00", "message": "Qualification complete: 4520/4,520 optimal; worst case X draw, O draw; browser parity passed. Solver-free neural policy exported."}

@@ -1,0 +1,1 @@
+{"name":"tic-tac-toe-distillation-lab","private":true,"type":"module","scripts":{"start":"python3 server.py","test":"python3 -m unittest discover -s tests -v"}}
