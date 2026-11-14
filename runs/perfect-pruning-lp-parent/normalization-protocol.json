@@ -1,0 +1,7 @@
+{
+  "registered_at": "2026-11-14T02:10:12.709040+00:00",
+  "source": "runs/perfect-sparse-head-a/head-55-magnitude-22.json",
+  "source_sha256": "cced1f8bc28785ca2681d6d35df518c29425f0b4620ae0c437c46e55c894aeb5",
+  "operation": "Positive common readout scaling only; all55 numeric active coefficients still counted as learned for retraining. This is an intermediate, not an independently qualified export.",
+  "model_sha256": "aba844ff8afeec791d4cdccc4d60b7681dca34f9fa516e815e9d6d39f19bbd28"
+}

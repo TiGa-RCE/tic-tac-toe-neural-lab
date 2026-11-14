@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import {detectHosting} from './web/hosted.js';
 
-const ids=['compact','dense','perfect-compact','original'];
-const counts=[38,123,74,6537];
+const ids=['compact','dense','perfect-compact','original','perfect-sparse'];
+const counts=[38,123,74,6537,53];
 const models=Object.fromEntries(ids.map((id,i)=>[id,{
   checkpoint:id,run_id:`frozen-${id}`,parameter_count:counts[i],
   architecture:[9,1,9],encoding:'relative-signed',layers:[{weights:[[i]],bias:[i]}],
@@ -12,9 +12,9 @@ const catalog=ids.map((id,i)=>({id,label:id,parameters:counts[i],model_url:`/dat
   no_loss_from_empty:true,perfect_policy:i>1,optimal_count:i>1?4520:3800,total:4520}));
 const fixtures={
   '/site-config.json':{mode:'hosted'},
-  '/data/status.json':{status:'completed',model_available:true,parameter_count:74,evaluation:{independent:{no_loss_from_empty:true}}},
-  '/data/model.json':models['perfect-compact'],
-  '/data/networks.json':{default_id:'perfect-compact',default_game_id:'perfect-compact',default_training_id:'perfect-compact',networks:catalog},
+  '/data/status.json':{status:'completed',model_available:true,parameter_count:53,evaluation:{independent:{no_loss_from_empty:true}}},
+  '/data/model.json':models['perfect-sparse'],
+  '/data/networks.json':{default_id:'perfect-sparse',default_game_id:'perfect-sparse',default_training_id:'perfect-sparse',networks:catalog},
   ...Object.fromEntries(ids.map(id=>[`/data/networks/${id}.json`,models[id]])),
 };
 const fetched=[];
@@ -33,15 +33,15 @@ globalThis.Worker=FakeWorker;
 
 try {
   const host=await detectHosting();
-  assert.equal(host.selectedGameId,'perfect-compact','new visits default to the fully optimal 74');
-  assert.equal(host.selectedTrainingId,'perfect-compact');
+  assert.equal(host.selectedGameId,'perfect-sparse','new visits default to the fully optimal sparse model');
+  assert.equal(host.selectedTrainingId,'perfect-sparse');
   assert.deepEqual(host.gameNetworks.map(n=>n.id),ids);
-  assert.equal((await host.request('/api/model')).checkpoint,'perfect-compact');
+  assert.equal((await host.request('/api/model')).checkpoint,'perfect-sparse');
 
   for(const id of ids){
     const model=await host.request(`/api/model?network_id=${id}`);
     assert.equal(model.checkpoint,id,`the requested ${id} weights are returned`);
-    assert.equal(host.selectedGameId,'perfect-compact','a load does not commit a UI selection before its token check');
+    assert.equal(host.selectedGameId,'perfect-sparse','a load does not commit a UI selection before its token check');
     model.layers[0].weights[0][0]=999999;
     const reloaded=await host.request(`/api/model?network_id=${id}`);
     assert.deepEqual(reloaded,models[id],'callers cannot mutate a frozen model through a returned object');
@@ -70,9 +70,9 @@ try {
   const fresh=await detectHosting();
   unavailable.add('/data/networks/dense.json');
   await assert.rejects(()=>fresh.request('/api/model?network_id=dense'),/load|404/i);
-  assert.equal(fresh.selectedGameId,'perfect-compact','a failed fetch never commits a different game choice');
+  assert.equal(fresh.selectedGameId,'perfect-sparse','a failed fetch never commits a different game choice');
   assert(!fetched.some(path=>/teaching|oracle/.test(path)),'game selection never loads the solver teaching corpus');
-  console.log(JSON.stringify({passed:true,choices:ids,default_game:'perfect-compact',inference_performed:false,
+  console.log(JSON.stringify({passed:true,choices:ids,default_game:'perfect-sparse',inference_performed:false,
     independent_training:true,frozen_copies:true,failed_load_keeps_selection:true,teacher_requests:0}));
 } finally {
   globalThis.fetch=oldFetch;

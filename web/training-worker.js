@@ -1,7 +1,7 @@
 /** Real CPU training. This module is loaded only after explicit Start training.
  * Teacher labels are training/audit data. The gameplay module never imports it.
  */
-import {outcome, encode, modelEncoding, D4_PERMUTATIONS, policyScore} from './network.js';
+import {outcome, encode, modelEncoding, D4_PERMUTATIONS, policyScore, coefficientValue} from './network.js';
 
 let command='resume';
 let started=false;
@@ -26,7 +26,11 @@ function random(seed) {
   return ()=>{s+=0x6D2B79F5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return ((t^t>>>14)>>>0)/4294967296;};
 }
 function flatten(model) {
-  const net=model.layers.map((layer,index)=>({input:layer.weights.length,output:layer.weights[0].length,w:Float64Array.from(layer.weights.flat()),b:Float64Array.from(layer.bias),biasOrbits:model.output_bias_orbits==='D4-corner-zero' && index===model.layers.length-1}));
+  const net=model.layers.map((layer,index)=>({input:layer.weights.length,output:layer.weights[0].length,
+    w:Float64Array.from(layer.weights.flat(),value=>coefficientValue(value,model.coefficient_storage)),
+    b:Float64Array.from(layer.bias,value=>coefficientValue(value,model.coefficient_storage)),
+    trainW:layer.weights.flat().map(value=>typeof value==='number'),trainB:layer.bias.map(value=>typeof value==='number'),
+    biasOrbits:model.output_bias_orbits==='D4-corner-zero' && index===model.layers.length-1}));
   net.symmetry=model.symmetry_average || null;
   net.reference=model.reference_logit_zero===true;
   net.roundDecimals=model.logit_round_decimals;
@@ -40,7 +44,7 @@ function flatten(model) {
 }
 function clone(net) {const result=net.map(l=>({...l,w:l.w.slice(),b:l.b.slice()}));result.symmetry=net.symmetry;result.reference=net.reference;result.roundDecimals=net.roundDecimals;result.outputBiasOrbits=net.outputBiasOrbits;return result;}
 function exportModel(net,parent,checkpoint,run_id) {
-  return {...parent,checkpoint,run_id,coefficient_precision:'float64',coefficient_payload_bytes:8*net.reduce((total,layer)=>total+layer.w.length+layer.b.length,0),layers:net.map((l,index)=>({weights:Array.from({length:l.input},(_,i)=>Array.from(l.w.slice(i*l.output,(i+1)*l.output))),bias:Array.from(l.b),activation:index===net.length-1?'linear':'tanh'}))};
+  return {...parent,checkpoint,run_id,coefficient_precision:'float64',coefficient_payload_bytes:8*net.reduce((total,layer)=>total+layer.trainW.filter(Boolean).length+layer.trainB.filter(Boolean).length,0),layers:net.map((l,index)=>({weights:Array.from({length:l.input},(_,i)=>Array.from({length:l.output},(_,j)=>l.trainW[i*l.output+j]?l.w[i*l.output+j]:parent.layers[index].weights[i][j])),bias:Array.from(l.b,(value,j)=>l.trainB[j]?value:parent.layers[index].bias[j]),activation:index===net.length-1?'linear':'tanh'}))};
 }
 function baseForward(net,input,cache=false) {
   const activations=[input];
@@ -144,11 +148,15 @@ function update(net,opt,rows,samples,parentLogits,protectedRows) {
     }
   }
   let norm=0;
-  for(const g of grads) for(const array of [g.w,g.b]) for(const v of array) norm+=v*v;
+  for(let k=0;k<grads.length;k++) for(const type of ['w','b']) {
+    const g=grads[k][type],mask=type==='w'?net[k].trainW:net[k].trainB;
+    for(let i=0;i<g.length;i++) {if(mask[i]) norm+=g[i]*g[i];else g[i]=0;}
+  }
   const scale=Math.min(1,1/Math.max(Math.sqrt(norm),1e-30));opt.t++;
   for(let k=0;k<net.length;k++) for(const type of ['w','b']) {
     const weights=net[k][type],m=opt.layers[k]['m'+type],v=opt.layers[k]['v'+type],g=grads[k][type];
     for(let i=0;i<weights.length;i++) {
+      if(!(type==='w'?net[k].trainW:net[k].trainB)[i]) continue;
       const d=g[i]*scale;m[i]=.9*m[i]+.1*d;v[i]=.999*v[i]+.001*d*d;
       weights[i]-=.0003*(m[i]/(1-.9**opt.t))/(Math.sqrt(v[i]/(1-.999**opt.t))+1e-8);
     }
@@ -206,12 +214,12 @@ async function run(options) {
     ['phase2','02 · Repair & retain','Half native, half retention; founder-correct KL at temperature 2.'],
     ['phase3','03 · Consolidate','Final 512-update phase, retaining all checkpoint coverage and break counts.'],
     ['qualification','Audit the frozen candidate','Exhaustive decision coverage and every adversarial continuation from empty, as both X and O.'],
-    ['export','Save the trained student','Download the selected experiment weights; the playable game keeps its published compact champion.'],
+    ['export','Save the trained student','Download the selected experiment weights; your chosen opponent stays frozen.'],
   ];
   const status={status:'running',run_id:options.run_id,training_mode:'browser-finite-domain',architecture:options.parent.architecture,parameter_count:options.parent.parameter_count,
     forward_passes_per_move:options.parent.symmetry_average==='D4'?8:1,
     phase_id:'teacher',phases:phases.map(([id,title,detail])=>({id,title,detail,status:'pending',progress:0,metrics:{}})),metrics:{},history:[],events:[],candidates:[],evaluation:{},dataset:{},model_available:true,training_network:options.training_network || null,
-    recipe_note:'Real visitor-local training, one branch in three phases of 512 Adam updates. All finite decision states are TRAIN. No held-out generalization is claimed. Labels remain in this training worker. The playable game always keeps the published compact champion; experiment weights are available in the run download.'};
+    recipe_note:'Real visitor-local training, one branch in three phases of 512 Adam updates. All finite decision states are TRAIN. No held-out generalization is claimed. Labels remain in this training worker. Your selected opponent stays frozen; experiment weights are available in the run download.'};
   const event=message=>{status.events.push({time:new Date().toISOString(),message});send(status);};
   const phase=(id,progress,metrics={})=>{
     status.phase_id=id;const p=status.phases.find(p=>p.id===id);Object.assign(p,{progress,status:progress>=1?'completed':'running',metrics});send(status);
@@ -269,7 +277,7 @@ async function run(options) {
     phase('qualification',1,{no_loss_from_empty:certified});
     status.selection={checkpoint:bestCheckpoint};
     phase('export',1,{checkpoint:bestCheckpoint,parent_retained:bestCheckpoint==='training-parent',gameplay_unchanged:true});
-    status.status='completed';event('Browser experiment complete. Download its weights and evidence; the playable game still uses the published compact champion.');
+    status.status='completed';event('Browser experiment complete. Download its weights and evidence; your chosen opponent stays frozen.');
     archive.status=status;
     archive.selected_model=bestCheckpoint==='training-parent'?options.parent:exportModel(best,options.parent,bestCheckpoint,options.run_id);
     self.postMessage({type:'complete',status,archive,model:null});

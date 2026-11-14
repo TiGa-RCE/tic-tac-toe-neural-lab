@@ -1,0 +1,77 @@
+{
+  "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "access_mode": "public",
+  "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
+  "site_version": 4,
+  "site_source_commit": "e15c79701fc60a0d7270bbc52fe4780ae1cc4c2e",
+  "site_deployment_id": "appgdep_6af7be4ae444819196c5413ec0a894c9",
+  "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
+  "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+  "model_parameters": 74,
+  "coefficient_precision": "float32",
+  "coefficient_payload_bytes": 296,
+  "arithmetic": "JavaScript double",
+  "forward_passes_per_move": 8,
+  "training_networks": [
+    38,
+    123,
+    74,
+    6537
+  ],
+  "ordinary_tests_passed": 50,
+  "live_browser_verified": true,
+  "qualification": {
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "optimal_decisions": 4520,
+    "total_decisions": 4520,
+    "browser_action_mismatches": 0
+  },
+  "minimality_scope": "Smallest verified result found in bounded registered search; no global minimality proof.",
+  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_03c40b7f8e688191a6101645abe8e2c6",
+  "compact_fully_optimal_choice": {
+    "id": "perfect-compact",
+    "run_id": "perfect-optimal-74",
+    "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+    "parameters": 74,
+    "architecture": [
+      9,
+      4,
+      8
+    ],
+    "reference_logit_zero": true,
+    "forward_passes_per_move": 8,
+    "coefficient_precision": "float32",
+    "coefficient_payload_bytes": 296,
+    "optimal_decisions": 4520,
+    "total_decisions": 4520,
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "browser_action_mismatches": 0,
+    "max_browser_logit_error": 1.4210854715202004e-14,
+    "worker_training_updates_verified": 1536,
+    "search_trials": 54,
+    "solver_fallback": false,
+    "global_minimum_proven": false
+  },
+  "live_browser_evidence": "docs/opponent-choice-preview.jpg",
+  "default_game_network_id": "perfect-compact",
+  "gameplay_networks": [
+    38,
+    123,
+    74,
+    6537
+  ],
+  "gameplay_choices": {
+    "default": "perfect-compact",
+    "network_ids": [
+      "compact",
+      "dense",
+      "perfect-compact",
+      "original"
+    ],
+    "changing_opponent_starts_new_game": true,
+    "independent_training_selection": true,
+    "visitor_training_never_replaces_opponent": true
+  }
+}

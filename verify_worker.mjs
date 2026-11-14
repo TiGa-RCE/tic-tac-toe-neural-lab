@@ -17,13 +17,19 @@ worker.on('message',message=>{
   if(message.type!=='complete') return;
   clearTimeout(timer);
   const shapes=message.archive.schedules.map(phase=>({phase:phase.phase,updates:phase.indices.length,batch_size:phase.indices[0]?.length}));
+  const structurePreserved=model=>model?.layers?.length===parent.layers.length && parent.layers.every((layer,k)=>
+    layer.weights.every((row,i)=>row.every((value,j)=>typeof value==='number' || model.layers[k].weights[i][j]===value)) &&
+    layer.bias.every((value,j)=>typeof value==='number' || model.layers[k].bias[j]===value));
+  const structureOK=message.archive.checkpoints.every(checkpoint=>structurePreserved(checkpoint.model)) && structurePreserved(message.archive.selected_model);
   const report={status:s.status,steps:s.metrics?.step,phases:shapes,pause_acknowledged:paused,resume_requested:resumed,
     certified:s.evaluation?.browser_audit?.no_loss_from_empty,optimal_count:s.evaluation?.exhaustive?.correct,
     selected:s.selection?.checkpoint,incumbent_preserved:message.model===null&&hash(original)===hash(JSON.stringify(parent)),
-    elapsed_seconds:(Date.now()-began)/1000};
+    structural_coefficients_preserved:structureOK,elapsed_seconds:(Date.now()-began)/1000};
+  report.worker_source_sha256=hash(fs.readFileSync(new URL('./web/training-worker.js',import.meta.url)));
+  report.network_source_sha256=hash(fs.readFileSync(new URL('./web/network.js',import.meta.url)));
   const minimumOptimal=args.includes('--minimum-optimal')?Number(get('--minimum-optimal')):4520;
   report.minimum_optimal=minimumOptimal;
-  report.passed=report.status==='completed'&&report.steps===1536&&report.pause_acknowledged&&report.certified&&report.optimal_count>=minimumOptimal&&report.incumbent_preserved&&shapes.every(p=>p.updates===512&&p.batch_size===128);
+  report.passed=report.status==='completed'&&report.steps===1536&&report.pause_acknowledged&&report.certified&&report.optimal_count>=minimumOptimal&&report.incumbent_preserved&&structureOK&&shapes.every(p=>p.updates===512&&p.batch_size===128);
   fs.writeFileSync(get('--output'),JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify(report));
   worker.terminate();

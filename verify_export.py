@@ -78,7 +78,24 @@ def _finite_number(value):
     return type(value) in (int, float) and math.isfinite(value)
 
 
+def stored_coefficient(value, storage=None):
+    if storage not in (None, 'sparse-fixed-v1'):
+        raise ValueError('Unsupported coefficient storage')
+    if _finite_number(value):
+        return value
+    if storage == 'sparse-fixed-v1':
+        if value is None:
+            return 0.
+        if value == 'fixed:+1':
+            return 1.
+        if value == 'fixed:-1':
+            return -1.
+    raise ValueError('Invalid stored coefficient')
+
+
 def validate_model(model):
+    storage=model.get('coefficient_storage')
+    stored_coefficient(0.,storage)
     architecture = model.get("architecture")
     if (not isinstance(architecture, list) or len(architecture) < 2
             or architecture[0] not in (9, 18, 27) or architecture[-1] not in (8,9)
@@ -108,17 +125,29 @@ def validate_model(model):
         weights, bias = layer.get("weights"), layer.get("bias")
         if (not isinstance(weights, list) or len(weights) != n_input
                 or any(not isinstance(row, list) or len(row) != n_output
-                       or any(not _finite_number(value) for value in row)
+                       or any(not _valid_coefficient(value,storage) for value in row)
                        for row in weights)):
             raise ValueError(f"Layer {index} weights have invalid dimensions or nonfinite values")
         bias_width=2 if orbit_bias and index==len(layers)-1 else n_output
         if (not isinstance(bias, list) or len(bias) != bias_width
-                or any(not _finite_number(value) for value in bias)):
+                or any(not _valid_coefficient(value,storage) for value in bias)):
             raise ValueError(f"Layer {index} bias has invalid dimensions or nonfinite values")
         expected_activation = "linear" if index == len(layers) - 1 else "tanh"
         if layer.get("activation") != expected_activation:
             raise ValueError(f"Layer {index} must use {expected_activation} activation")
+    count=sum(_finite_number(value) for layer in layers
+              for value in [v for row in layer['weights'] for v in row]+layer['bias'])
+    if 'parameter_count' in model and model['parameter_count']!=count:
+        raise ValueError('Learned coefficient count does not match stored numeric values')
     return architecture
+
+
+def _valid_coefficient(value, storage):
+    try:
+        stored_coefficient(value,storage)
+        return True
+    except ValueError:
+        return False
 
 
 def encode(board, encoding='relative-one-hot-interleaved'):
@@ -141,7 +170,8 @@ def _dense_predict(model, board):
     encoding=model.get('encoding',{9:'relative-signed',18:'relative-two-channel',27:'relative-one-hot-interleaved'}[model['architecture'][0]])
     values = encode(board,encoding)
     for index,layer in enumerate(model["layers"]):
-        weights, bias = layer["weights"], layer["bias"]
+        weights=[[stored_coefficient(value,model.get('coefficient_storage')) for value in row] for row in layer['weights']]
+        bias=[stored_coefficient(value,model.get('coefficient_storage')) for value in layer['bias']]
         if model.get('output_bias_orbits') and index==len(model['layers'])-1:
             edge,center=bias
             bias=[0.,edge,0.,edge,center,edge,0.,edge]
@@ -228,7 +258,8 @@ def qualify(model, include_fixtures=False):
         "run_id": model.get("run_id"),
         "checkpoint": model.get("checkpoint"),
         "architecture": architecture,
-        "parameter_count": sum(sum(len(row) for row in layer['weights'])+len(layer['bias']) for layer in model['layers']),
+        "parameter_count": sum(_finite_number(value) for layer in model['layers']
+                               for value in [v for row in layer['weights'] for v in row]+layer['bias']),
         "symmetry_average": model.get('symmetry_average'),
         "forward_passes_per_move": 8 if model.get('symmetry_average')=='D4' else 1,
         "encoding": model.get('encoding', {9:'relative-signed',18:'relative-two-channel',27:'relative-one-hot-interleaved'}[architecture[0]]),

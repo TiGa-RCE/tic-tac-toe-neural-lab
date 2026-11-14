@@ -1,0 +1,11 @@
+{
+  "run_id": "perfect-sparse-53",
+  "parameter_count": 53,
+  "optimal_count": 4520,
+  "total": 4520,
+  "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
+  "coefficient_precision": "float16",
+  "coefficient_payload_bytes": 106,
+  "qualification": "Independent all-board optimality, both-side adversarial no-loss, exact browser-action parity.",
+  "minimality_scope": "Smallest verified result in the retained bounded searches; no global minimality proof."
+}

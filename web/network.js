@@ -25,6 +25,19 @@ export function encode(board, encoding = 'relative-one-hot-interleaved') {
   return board.flatMap(v => [Number(v === player), Number(v === -player), Number(v === 0)]);
 }
 
+// Structural zeros and unit constants are explicit, rather than stored learned
+// scalar values. Their positions and format metadata remain part of the file.
+export function coefficientValue(value, storage = null) {
+  if(storage!==null && storage!==undefined && storage!=='sparse-fixed-v1') throw new Error('Unsupported coefficient storage.');
+  if(typeof value==='number' && Number.isFinite(value)) return value;
+  if(storage==='sparse-fixed-v1') {
+    if(value===null) return 0;
+    if(value==='fixed:+1') return 1;
+    if(value==='fixed:-1') return -1;
+  }
+  throw new Error('Invalid neural coefficient.');
+}
+
 function densePredict(model, board) {
   let input = encode(board, modelEncoding(model));
   if (!Array.isArray(model?.layers) || !model.layers.length) throw new Error('No trained network loaded.');
@@ -35,10 +48,11 @@ function densePredict(model, board) {
     if (layer.weights.length !== input.length) throw new Error('Checkpoint input dimensions do not match.');
     const shared=biasOrbits==='D4-corner-zero' && index===model.layers.length-1;
     if(shared && (layer.bias.length!==2 || layer.weights.some(row=>row.length!==8))) throw new Error('Shared output readout must store eight weight columns and two biases.');
-    const bias=shared?[0,layer.bias[0],0,layer.bias[0],layer.bias[1],layer.bias[0],0,layer.bias[0]]:layer.bias;
+    const storedBias=layer.bias.map(value=>coefficientValue(value,model.coefficient_storage));
+    const bias=shared?[0,storedBias[0],0,storedBias[0],storedBias[1],storedBias[0],0,storedBias[0]]:storedBias;
     const output = bias.map((bias, j) => {
       let value = bias;
-      for (let i = 0; i < input.length; i++) value += input[i] * layer.weights[i][j];
+      for (let i = 0; i < input.length; i++) value += input[i] * coefficientValue(layer.weights[i][j],model.coefficient_storage);
       return layer.activation === 'tanh' ? Math.tanh(value) : value;
     });
     if (output.some(v => !Number.isFinite(v))) throw new Error('Checkpoint produced a non-finite score.');

@@ -33,14 +33,22 @@ def build(run, output, repository_url, site_url):
     perfect_index=ROOT/'runs/perfect-optimal-selection.json'
     if perfect_index.exists():
         name=json.loads(perfect_index.read_text())['run_id']
-        if Path(name).name!=name:raise ValueError('Perfect model registry must contain a run name, not a path.')
+        if Path(name).name!=name or name in ('','.','..'):raise ValueError('Perfect model registry must contain a run name, not a path.')
         perfect_run=ROOT/'runs'/name
+    sparse_run=None
+    sparse_index=ROOT/'runs/sparse-perfect-selection.json'
+    if sparse_index.exists():
+        name=json.loads(sparse_index.read_text())['run_id']
+        if Path(name).name!=name or name in ('','.','..'):raise ValueError('Sparse model registry must contain a run name, not a path.')
+        sparse_run=ROOT/'runs'/name
+        if not (sparse_run/'model.json').exists():raise ValueError('The registered sparse perfect model is missing.')
     compact_run=ROOT/'runs/compression-20261113-selected'
     if not (compact_run/'model.json').exists():compact_run=run
     choices=[('compact','Smallest verified shared network',compact_run),
              ('dense','Compact dense network (one pass)',ROOT/'runs/compression-20261113-a'),
              ('perfect-compact','Compact fully optimal network',perfect_run),
              ('original','Original perfect network',ROOT/'runs/20261113T233235Z-7e5be6')]
+    if sparse_run is not None:choices.insert(3,('perfect-sparse','Sparse fully optimal network',sparse_run))
     seen=set()
     model_dir=data/'networks';model_dir.mkdir(exist_ok=True)
     for identifier,label,folder in choices:
@@ -49,10 +57,12 @@ def build(run, output, repository_url, site_url):
         sha=hashlib.sha256((folder/'model.json').read_bytes()).hexdigest()
         qualification=json.loads((folder/'independent-verification.json').read_text())
         parity=json.loads((folder/'portable-verification.json').read_text())
-        if identifier=='perfect-compact' and not (qualification.get('perfect_policy') is True and
+        if identifier in ('perfect-compact','perfect-sparse') and not (qualification.get('perfect_policy') is True and
                 qualification.get('optimal_count')==4520 and qualification.get('total')==4520 and
+                qualification.get('no_loss_from_empty') is True and parity.get('passed') is True and
                 parity.get('action_mismatches')==0 and parity.get('optimal_count')==4520):
-            raise ValueError('The compact perfect choice must independently pass all 4,520 boards and exact browser actions.')
+            kind='compact perfect choice' if identifier=='perfect-compact' else 'sparse perfect choice'
+            raise ValueError(f'The {kind} must independently pass all 4,520 boards and exact browser actions.')
         if sha in seen:continue
         seen.add(sha)
         if not qualification['no_loss_from_empty'] or not parity['passed']:continue
@@ -65,6 +75,11 @@ def build(run, output, repository_url, site_url):
                         'symmetry_average':candidate.get('symmetry_average'),'forward_passes_per_move':candidate.get('forward_passes_per_move',1),
                         'reference_logit_zero':candidate.get('reference_logit_zero',False),'output_bias_orbits':candidate.get('output_bias_orbits'),
                         'coefficient_precision':candidate.get('coefficient_precision','float64'),
+                        'coefficient_storage':candidate.get('coefficient_storage','dense'),
+                        'structural_zero_slots':candidate.get('structural_zero_slots',0),
+                        'fixed_unit_slots':candidate.get('fixed_unit_slots',0),
+                        'coefficient_payload_bytes':candidate.get('coefficient_payload_bytes',
+                            (folder/'coefficients.bin').stat().st_size if (folder/'coefficients.bin').exists() else None),
                         'no_loss_from_empty':True,'perfect_policy':qualification.get('perfect_policy',False),
                         'optimal_count':qualification['optimal_count'],'total':qualification['total'],
                         'certification_url':'/data/networks/'+identifier+'-certification.json'})
