@@ -1,0 +1,4 @@
+{"time": "2026-11-13T23:56:36.946645+00:00", "message": "Certified by training diagnosis: 9-16-9, 313 parameters, seed11, phase2; 4076/4520 optimal, non-losing both sides."}
+{"time": "2026-11-13T23:56:37.288666+00:00", "message": "Certified by training diagnosis: 9-8-9, 161 parameters, seed11, phase3; 3909/4520 optimal, non-losing both sides."}
+{"time": "2026-11-13T23:56:52.684777+00:00", "message": "Certified by training diagnosis: 9-6-9, 123 parameters, seed37, phase8; 3800/4520 optimal, non-losing both sides."}
+{"time": "2026-11-13T23:57:28.042720+00:00", "message": "Selected 123-parameter network; independent no-loss X/O and browser parity pass."}

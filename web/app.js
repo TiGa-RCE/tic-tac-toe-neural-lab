@@ -82,7 +82,7 @@ function renderCandidates(status) {
   $('candidates-panel').hidden = candidates.length === 0;
   $('candidate-count').textContent = `${candidates.length} SAVED`;
   const selected = status.selection?.checkpoint || status.evaluation?.selected_checkpoint;
-  const finiteDomain = /finite-domain/.test(status.training_mode || '');
+  const finiteDomain = /finite-domain|compress/.test(status.training_mode || '') || Boolean(status.compression);
   $('candidate-metric-heading').textContent = finiteDomain ? 'Full domain' : 'Validation';
   $('candidate-note').textContent = finiteDomain ? 'Every reachable decision state is teaching data in this continuation. Repairs and breaks compare with its frozen parent; this is finite-domain coverage, not held-out generalization.' : 'Measured against the shared founder on validation: repairs turn wrong moves correct; breaks turn correct moves wrong. Selection is frozen before TEST.';
   $('candidates').innerHTML = candidates.map(candidate => {
@@ -92,6 +92,37 @@ function renderCandidates(status) {
     const fraction = finite(correct) && finite(count) ? `${correct} / ${count}` : '—';
     return `<tr class="${chosen ? 'selected' : ''}"><th scope="row">${escape(candidate.checkpoint)}${chosen ? '<span class="selected-label">SELECTED</span>' : ''}</th><td>${escape(fraction)}</td><td class="repair-count">${escape(number(candidate.repairs))}</td><td class="${candidate.breaks ? 'break-count' : ''}">${escape(number(candidate.breaks))}</td></tr>`;
   }).join('');
+}
+
+function renderCompression(status) {
+  const compression=status.compression;
+  $('compression-panel').hidden=!compression;
+  if(!compression) return;
+  const baseline=compression.baseline_parameters;
+  const selected=compression.selected_parameters ?? status.parameter_count;
+  $('compression-baseline').textContent=number(baseline);
+  $('compression-selected').textContent=number(selected);
+  $('compression-reduction').textContent=finite(baseline)&&baseline>0&&finite(selected)?`${(100*(1-selected/baseline)).toFixed(2)}%`:'—';
+  $('compression-storage').hidden=!finite(compression.coefficient_payload_bytes);
+  $('compression-storage').textContent=`${number(compression.coefficient_payload_bytes)}-byte coefficient payload (${compression.coefficient_precision || 'declared precision'}; JSON and runtime code excluded). ${number(compression.forward_passes_per_move ?? 1)} neural forward passes per move.`;
+  const candidates=Array.isArray(compression.candidates)?compression.candidates:[];
+  $('compression-trials').textContent=`${number(compression.trial_count ?? candidates.length)} RECORDED`;
+  $('compression-candidates').innerHTML=candidates.map(candidate=>{
+    const parameters=candidate.parameters ?? candidate.parameter_count;
+    const passes=candidate.forward_passes_per_move ?? (candidate.symmetry_average==='D4'?8:1);
+    const reference=candidate.reference_logit_zero===true || candidate.architecture?.at(-1)===8;
+    const architecture=(Array.isArray(candidate.architecture)?candidate.architecture.join(' → '):candidate.architecture || '—')+(reference?' + fixed 0':'')+(candidate.output_bias_orbits==='D4-corner-zero'?' · shared bias':'');
+    const noLoss=candidate.no_loss_from_empty ?? candidate.independent?.no_loss_from_empty ?? candidate.evaluation?.independent?.no_loss_from_empty;
+    const optimal=candidate.optimal_count ?? candidate.independent?.optimal_count ?? candidate.evaluation?.exhaustive?.correct;
+    const total=candidate.total ?? candidate.count ?? candidate.independent?.total ?? candidate.evaluation?.exhaustive?.count ?? 4520;
+    const seed=Array.isArray(candidate.seeds)?candidate.seeds.join(', '):candidate.seed;
+    const trials=candidate.trials ?? candidate.attempts;
+    const sampling=seed!==undefined?String(seed):finite(trials)?`${number(trials)} trials`:'—';
+    const chosen=candidate.selected===true || (candidate.checkpoint && candidate.checkpoint===compression.selected_checkpoint);
+    const qualification=candidate.qualification || 'No independent qualification recorded';
+    return `<tr class="${chosen?'selected':''}"><th scope="row">${escape(architecture)}${chosen?'<span class="selected-label">SELECTED</span>':''}</th><td>${escape(number(parameters))}</td><td>${escape(number(passes))}${candidate.symmetry_average==='D4'?' · D4':''}</td><td>${escape(sampling)}</td><td class="${noLoss===true?'repair-count':noLoss===false?'break-count':''}">${noLoss===true?'Yes':noLoss===false?'No':'—'}</td><td>${finite(optimal)?`${escape(number(optimal))} / ${escape(number(total))}`:'—'}</td><td class="qualification ${/failed/i.test(qualification)?'break-count':/passed/i.test(qualification)?'repair-count':''}">${escape(qualification)}</td></tr>`;
+  }).join('');
+  $('compression-scope').textContent=compression.scope || 'Smallest qualified network in this recorded search. Failed training attempts do not prove that a smaller architecture is impossible. No solver or tactical fallback is used during play.';
 }
 
 function renderControls() {
@@ -104,9 +135,24 @@ function renderControls() {
   $('resume').disabled = state !== 'paused' || requestBusy || disconnected;
   $('stop').disabled = !active || requestBusy || disconnected;
   $('seed').disabled = active || requestBusy;
+  $('training-network').disabled = active || requestBusy;
   $('published-run').hidden = !hosted?.browserRun;
   $('published-run').disabled = active || requestBusy;
   $('download-run').hidden = !hosted?.archive;
+}
+
+function renderTrainingChoices() {
+  $('training-network-label').hidden=!hosted;
+  $('training-network-note').hidden=!hosted;
+  if(!hosted) return;
+  const networks=hosted.trainingNetworks;
+  const signature=JSON.stringify(networks.map(network=>[network.id,network.label,network.parameters,network.architecture,network.symmetry_average,network.output_bias_orbits]));
+  if($('training-network').dataset.catalog!==signature) {
+    $('training-network').innerHTML=networks.map(network=>`<option value="${escape(network.id)}">${escape(network.label || network.id)} · ${escape(number(network.parameters))} parameters · ${escape((network.architecture || []).join(' → '))}${network.reference_logit_zero===true || network.architecture?.at(-1)===8?' + fixed 0':''}${network.output_bias_orbits==='D4-corner-zero'?' · shared bias':''}${network.symmetry_average==='D4'?' · 8 passes':''}</option>`).join('');
+    $('training-network').dataset.catalog=signature;
+  }
+  $('training-network').value=hosted.selectedTrainingId;
+  $('training-network-note').textContent=`This choice trains only the browser experiment. The playable game keeps the published ${number(hosted.publishedModel.parameter_count)}-parameter champion; experiment weights are available in the run download.`;
 }
 
 function renderStatus(status) {
@@ -116,11 +162,11 @@ function renderStatus(status) {
   $('run-status').className = `status-pill ${state}`;
   $('run-id').textContent = status.run_id || 'No run yet';
   const arch = status.architecture;
-  if (Array.isArray(arch)) $('architecture').innerHTML = arch.map(escape).join(' <span>→</span> ');
+  if (Array.isArray(arch)) $('architecture').innerHTML = arch.map(escape).join(' <span>→</span> ')+(status.reference_logit_zero===true || arch.at(-1)===8?' <span>+ fixed 0</span>':'');
   if (finite(status.parameter_count)) $('parameter-count').textContent = status.parameter_count.toLocaleString();
   if (Array.isArray(status.phases) && status.phases.length) $('phases').innerHTML = status.phases.map(phaseMarkup).join('');
   const metrics = status.metrics || {};
-  const finiteDomain = /finite-domain/.test(status.training_mode || '');
+  const finiteDomain = /finite-domain|compress/.test(status.training_mode || '') || Boolean(status.compression);
   const browserTraining = status.training_mode === 'browser-finite-domain';
   $('loss').textContent = finite(metrics.loss) ? metrics.loss.toFixed(4) : '—';
   $('train-accuracy').textContent = percent(metrics.train_accuracy);
@@ -151,6 +197,8 @@ function renderStatus(status) {
   }).join('');
   renderEvidence(status);
   renderCandidates(status);
+  renderCompression(status);
+  renderTrainingChoices();
   drawChart(status.history || []);
   renderControls();
   if (!gameModel && status.model_available && !loadingGame) newGame();
@@ -281,6 +329,11 @@ function renderGame() {
   document.querySelector('.player-symbol.neural').textContent=humanSide===1?'○':'×';
   $('game-status').textContent=loadingGame?'Loading latest checkpoint…':!gameModel?'Waiting for a trained checkpoint':result!==null?(result===0?'A draw. Well played.':result===humanSide?'You won this game.':'The student wins this round.'):thinking?'The student is choosing…':currentPlayer()===humanSide?'Your turn. Pick a cell.':"The student's turn.";
   $('checkpoint').textContent=gameModel?`${gameModel.checkpoint || 'Saved weights'}${gameModel.run_id?` · ${gameModel.run_id}`:''}`:'No model loaded';
+  const symmetry=gameModel?.symmetry_average==='D4';
+  const passes=symmetry?8:1;
+  $('inference-work').hidden=!gameModel;
+  $('inference-work').textContent=(symmetry?`${number(gameModel.parameter_count)} learned parameters; ${number(passes)} neural passes per move. The same weights score all rotations and reflections. `:`${number(passes)} neural forward pass per move. `)+(gameModel?.reference_logit_zero===true?'Eight learned readouts plus a fixed zero produce nine move scores. ':'')+(gameModel?.output_bias_orbits==='D4-corner-zero'?'Two learned readout biases are shared across edge and center positions; corner biases are fixed at zero. ':'')+(Number.isInteger(gameModel?.logit_round_decimals)?`Policy ties use ${gameModel.logit_round_decimals}-decimal score keys, then lowest cell index. `:'')+'No solver or tactical fallback.';
+  $('inference-explanation').textContent=symmetry?'The same network scores eight rotations/reflections, maps scores back to the original cells and averages them. Occupied cells are masked; the highest legal neural score chooses the move.':'The student scores the nine cells in one forward pass. Occupied cells are masked; the highest legal policy score chooses the move.';
   const publishedProof=hosted?.publishedStatus?.evaluation?.independent?.no_loss_from_empty;
   $('play-proof').hidden=!publishedProof || !gameModel || gameModel.run_id!==hosted?.publishedModel?.run_id;
   $('play-proof').textContent='Published checkpoint: independently verified no-loss as both X and O. Moves use only this frozen neural network.';
@@ -329,8 +382,9 @@ async function newGame() {
 $('start').addEventListener('click',()=>{
   const seed=Number($('seed').value);
   if(!Number.isInteger(seed)||seed<0||seed>2147483647) {showError('Choose an integer seed from 0 to 2,147,483,647.');return;}
-  trainingAction('/api/train',{seed,mode:latestStatus?.model_available?'continue':'foundation'});
+  trainingAction('/api/train',{seed,mode:latestStatus?.model_available?'continue':'foundation',...(hosted?{network_id:$('training-network').value}:{})});
 });
+$('training-network').addEventListener('change',()=>{if(hosted) hosted.selectedTrainingId=$('training-network').value;});
 for(const action of ['pause','resume','stop']) $(action).addEventListener('click',()=>trainingAction('/api/control',{action}));
 $('new-game').addEventListener('click',newGame);
 $('side').addEventListener('change',newGame);

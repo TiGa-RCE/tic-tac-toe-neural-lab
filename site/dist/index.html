@@ -26,10 +26,19 @@
           <div class="section-heading"><div><span class="micro">01 / TRAINING</span><h2 id="training-title">The learning process</h2></div><span class="status-pill" id="run-status">Idle</span></div>
           <div class="panel control-panel">
             <div class="run-line"><div><span class="micro">CURRENT RUN</span><div id="run-id" class="mono muted">No run yet</div></div><label class="seed-label">Seed <input id="seed" type="number" value="42" min="0" max="2147483647" step="1" aria-label="Training seed"></label></div>
+            <label id="training-network-label" class="training-network-label" hidden><span>Training network</span><select id="training-network" aria-label="Training network"></select></label>
+            <p id="training-network-note" class="caption" hidden>Choose the network for this browser experiment. The playable game keeps the published compact champion.</p>
             <div class="actions"><button id="start" class="primary">Start training <span aria-hidden="true">↗</span></button><button id="pause">Pause</button><button id="resume" hidden>Resume</button><button id="stop" class="quiet">Stop</button></div>
             <p id="training-note" class="caption">Shared founder → three refinement phases → sealed qualification. Every phase reports real measurements.</p>
             <div class="hosted-actions"><button id="published-run" class="text-button" hidden>View published run</button><button id="download-run" class="text-button" hidden>Download browser run evidence ↓</button></div>
           </div>
+          <section id="compression-panel" class="panel compression-panel" hidden aria-labelledby="compression-title">
+            <div class="panel-heading"><h3 id="compression-title">Network size search</h3><span id="compression-trials" class="micro">MEASURED</span></div>
+            <div class="compression-summary"><div><span>ORIGINAL PARAMETERS</span><strong id="compression-baseline">—</strong></div><div><span>SELECTED PARAMETERS</span><strong id="compression-selected">—</strong></div><div><span>REDUCTION</span><strong id="compression-reduction">—</strong></div></div>
+            <p id="compression-storage" class="caption" hidden></p>
+            <div class="table-wrap compression-table"><table><thead><tr><th scope="col">Architecture</th><th scope="col">Parameters</th><th scope="col">Neural passes</th><th scope="col">Seed / trials</th><th scope="col">No loss X & O</th><th scope="col">Optimal decisions</th><th scope="col">Evidence</th></tr></thead><tbody id="compression-candidates"></tbody></table></div>
+            <p id="compression-scope" class="caption"></p>
+          </section>
           <div id="phases" class="phase-list" aria-label="Training phases"><div class="empty panel">Waiting for the training recipe…</div></div>
           <div class="panel curve-panel">
             <div class="panel-heading"><h3>Learning curves</h3><span id="epoch-label" class="mono muted">No updates recorded</span></div>
@@ -52,13 +61,14 @@
             <div class="players"><div><span class="player-symbol human">×</span><div><strong>You</strong><small id="human-symbol">Playing X</small></div></div><span class="versus">VS</span><div><span class="player-symbol neural">○</span><div><strong>Neural network</strong><small id="network-symbol">Playing O</small></div></div></div>
             <div id="game-status" class="game-status" role="status" aria-live="polite">Waiting for a trained checkpoint</div>
             <p id="play-proof" class="play-proof" hidden></p>
+            <p id="inference-work" class="caption inference-work" hidden></p>
             <div id="board" class="board" aria-label="Tic-tac-toe board"></div>
             <div class="game-controls"><label>You play <select id="side" aria-label="Choose your side"><option value="1">X · first</option><option value="-1">O · second</option></select></label><button id="new-game">New game <span aria-hidden="true">↻</span></button></div>
             <label class="toggle"><input type="checkbox" id="show-scores" checked><span>Show policy probabilities</span></label><label class="toggle"><input type="checkbox" id="teacher-overlay"><span>Compare with the exact teacher</span></label><p id="teacher-note" class="teacher-note" hidden></p>
             <div class="checkpoint"><span class="micro">GAME CHECKPOINT</span><strong id="checkpoint">No model loaded</strong><p>Weights stay fixed during a game. New game loads the latest saved checkpoint.</p></div>
             <button id="export" class="text-button" disabled>Download these weights <span aria-hidden="true">↓</span></button>
           </section>
-          <section class="how-it-works"><span class="micro">WHAT MAKES THE MOVE?</span><p>The student scores the nine cells in one forward pass. Occupied cells are masked; the highest legal policy score chooses the move.</p><p>The deterministic solver supplies training labels and audits. It is never called to choose the student's move.</p><div class="flow"><span>Board</span><b>→</b><span>Network</span><b>→</b><span>Move</span></div></section>
+          <section class="how-it-works"><span class="micro">WHAT MAKES THE MOVE?</span><p id="inference-explanation">The student scores the nine cells in one forward pass. Occupied cells are masked; the highest legal policy score chooses the move.</p><p>The deterministic solver supplies training labels and audits. It is never called to choose the student's move.</p><div class="flow"><span>Board</span><b>→</b><span>Network</span><b>→</b><span>Move</span></div></section>
         </aside>
       </div>
     </main>

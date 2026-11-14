@@ -2,15 +2,19 @@
 
 **[Play the public ChatGPT Site](https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site)** · **[Source, weights and evidence](https://github.com/TiGa-RCE/tic-tac-toe-neural-lab)**
 
-A **6,537-parameter neural network** plays ordinary 3×3 tic-tac-toe. A deterministic minimax teacher supplied training labels. Gameplay is a forward pass through frozen neural weights, occupied-cell masking, and a stable argmax. **There is no solver, tactical rule, lookup-table move selector, or fallback during play.**
+The default game now uses **38 learned coefficients** — **99.42% fewer** than the original 6,537-parameter student. Its numeric coefficients pack into **76 bytes of IEEE binary16**; JSON metadata, geometry maps, and runtime code are additional. Inference uses ordinary JavaScript double arithmetic.
 
-The published student is optimal on **all 4,520 reachable decision states**. An independent oracle and inference implementation also checked every possible opponent continuation from empty: worst-case **draw as X and draw as O**. The frozen policy is therefore unbeatable on the ordinary game. Every decision state was deliberately supervised during continuation; this is exhaustive finite-domain qualification, not held-out generalization.
+The same two-neuron network scores all eight rotations/reflections; mapped logits are averaged before occupied-cell masking and a declared numerical argmax rule. Eight learned readouts plus a fixed zero and two shared output biases eliminate redundant coefficients. **No solver, tactical feature, per-position move table, or fallback chooses a move during play.**
+
+An independent verifier explored every possible opponent continuation from empty: the compact policy's worst case is **draw as X and draw as O**. It is optimal on 3,888/4,520 arbitrary decision boards (86.02%); no-loss from normal play is the acceptance requirement. The original perfect 6,537-parameter model remains preserved.
+
+This is the **smallest verified result found in 71 bounded training trials plus algebraic folding**, not a proof of a global minimum. See [COMPRESSION.md](COMPRESSION.md) for smaller failed attempts, the eight-pass compute tradeoff, and the preserved strict-parity failure.
 
 ## Public dashboard
 
 Play either side, inspect policy probabilities, explicitly compare with the teacher, download weights, and inspect actual phase curves, checkpoint repairs/breaks, and qualification results.
 
-The initial dashboard shows **saved published evidence**. **Train in this browser** starts real CPU training in an isolated Web Worker on the visitor's device: three phases of 512 Adam updates, native collection, targeted review, balanced retention, and parent-correct temperature-2 KL. Pause/resume/stop are cooperative; literal schedules and run evidence can be downloaded. Visitor runs do not modify the hosted baseline. The game retains the independently certified neural checkpoint throughout experimental training.
+The dashboard shows **saved published evidence**, including the complete size search. The **Training network** menu offers the 38-coefficient shared network, the 123-parameter one-pass dense model, and the original 6,537-parameter perfect model. Selection changes the visitor experiment only; gameplay stays on the certified compact champion. **Train in this browser** starts real CPU training in an isolated Web Worker on the visitor's device: three phases of 512 Adam updates, native collection, targeted review, balanced retention, and parent-correct temperature-2 KL. Pause/resume/stop are cooperative; literal schedules and run evidence can be downloaded. Visitor runs do not modify the hosted baseline. The game retains the independently certified neural checkpoint throughout experimental training.
 
 Teacher labels load only after explicit training or enabling the optional comparison overlay. Default gameplay loads only the neural weights and run summary, without fetching the teaching corpus. Policy probabilities are not win probabilities.
 
@@ -51,19 +55,19 @@ The model still has 6,537 parameters. No ensemble, learned critic, per-position 
 
 ## Evidence and reproduction
 
-Final run: `runs/20261113T233235Z-7e5be6/`. It contains protocol/corpus, literal schedules, native traces, source snapshots, parent and all twelve branch checkpoints, selection seal, qualification receipt, `model.json`, independent fixtures, and portable parity. `browser-worker-verification.json` exercises the identical worker through a Node adapter: all 1,536 updates, pause/resume, and certified-incumbent preservation.
+Current compact export: `runs/compression-20261113-selected/`. Original perfect run: `runs/20261113T233235Z-7e5be6/`. It contains protocol/corpus, literal schedules, native traces, source snapshots, parent and all twelve branch checkpoints, selection seal, qualification receipt, `model.json`, independent fixtures, and portable parity. `browser-worker-verification.json` exercises the identical worker through a Node adapter: all 1,536 updates, pause/resume, and certified-incumbent preservation.
 
 See [VERIFICATION.md](VERIFICATION.md). Earlier machine paths in immutable historical receipts are provenance, not runtime requirements. Original smoke and split-study evidence remain preserved. The external Boundaries ZIP archives and unrelated user files are excluded.
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 build_site.py --run-dir runs/20261113T233235Z-7e5be6 --output site/dist
+python3 build_site.py --run-dir runs/compression-20261113-selected --output site/dist
 ```
 
 The ordinary tests do not load learned tensors. Deliberate requalification should use the supported local guard:
 
 ```bash
-~/.local/bin/memory-run --kind model --peak-bytes 536870912 -- python3 verify_export.py --model runs/20261113T233235Z-7e5be6/model.json --output recheck.json
+~/.local/bin/memory-run --kind model --peak-bytes 536870912 -- python3 verify_export.py --model runs/compression-20261113-selected/model.json --output recheck.json
 ```
 
 The static Site needs no server-side secrets, account connectors, training service, or connection to the original Mac.

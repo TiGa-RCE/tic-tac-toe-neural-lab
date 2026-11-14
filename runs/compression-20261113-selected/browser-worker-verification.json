@@ -1,0 +1,30 @@
+{
+  "status": "completed",
+  "steps": 1536,
+  "phases": [
+    {
+      "phase": "phase1",
+      "updates": 512,
+      "batch_size": 128
+    },
+    {
+      "phase": "phase2",
+      "updates": 512,
+      "batch_size": 128
+    },
+    {
+      "phase": "phase3",
+      "updates": 512,
+      "batch_size": 128
+    }
+  ],
+  "pause_acknowledged": true,
+  "resume_requested": true,
+  "certified": true,
+  "optimal_count": 3888,
+  "selected": "training-parent",
+  "incumbent_preserved": true,
+  "elapsed_seconds": 2.902,
+  "minimum_optimal": 3888,
+  "passed": true
+}

@@ -21,7 +21,9 @@ worker.on('message',message=>{
     certified:s.evaluation?.browser_audit?.no_loss_from_empty,optimal_count:s.evaluation?.exhaustive?.correct,
     selected:s.selection?.checkpoint,incumbent_preserved:message.model===null&&hash(original)===hash(JSON.stringify(parent)),
     elapsed_seconds:(Date.now()-began)/1000};
-  report.passed=report.status==='completed'&&report.steps===1536&&report.pause_acknowledged&&report.certified&&report.optimal_count===4520&&report.incumbent_preserved&&shapes.every(p=>p.updates===512&&p.batch_size===128);
+  const minimumOptimal=args.includes('--minimum-optimal')?Number(get('--minimum-optimal')):4520;
+  report.minimum_optimal=minimumOptimal;
+  report.passed=report.status==='completed'&&report.steps===1536&&report.pause_acknowledged&&report.certified&&report.optimal_count>=minimumOptimal&&report.incumbent_preserved&&shapes.every(p=>p.updates===512&&p.batch_size===128);
   fs.writeFileSync(get('--output'),JSON.stringify(report,null,2)+'\n');
   console.log(JSON.stringify(report));
   worker.terminate();

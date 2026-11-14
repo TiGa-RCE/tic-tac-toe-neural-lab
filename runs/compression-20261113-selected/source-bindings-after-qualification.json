@@ -1,0 +1,11 @@
+{
+  "bound_at": "2026-11-14T00:14:10.763325+00:00",
+  "scope": "Post-qualification binding of preserved source snapshots; not a claim of pre-registered source hashing.",
+  "sources": {
+    "finalize_compression.py": "fe0e3448b618c8961245091c7ec624c44efae0ba76d966c9bcb5678205714bda",
+    "verify_export.py": "e3b18f8c0b24b44e422d09507fb9038963b93667480179f4ac05b3b1ca4791d4",
+    "web/network.js": "fd9d7241f48e68d908666176f796443aa0244ced91f332f5b9e232172ff661fd",
+    "web/training-worker.js": "794e7910ccbdee57c8ba5babbe22ebbc684e51a17475e9fdd0b605f1f55365bd"
+  },
+  "qualification_receipt_sha256": "26044878e61404a5e842369be4070e17ea0378645cfa635b89b87ed8a85f6df9"
+}

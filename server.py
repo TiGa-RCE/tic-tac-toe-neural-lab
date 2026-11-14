@@ -76,9 +76,12 @@ class Controller:
                     prior_state=json.loads((prior/'status.json').read_text())
                     if prior_state.get('status')!='completed' or not (prior/'model.json').exists(): continue
                     model=json.loads((prior/'model.json').read_text())
+                    # The original Python continuation has a fixed architecture.
+                    # Compact variants train in the generic browser worker/search CLI.
+                    if model.get('architecture')!=[27,64,64,9]:continue
                     checkpoint=prior/(model['checkpoint']+'.npz')
                     if checkpoint.is_file(): parents.append(checkpoint)
-                if not parents: raise RuntimeError('Complete a foundation run before continuing training.')
+                if not parents: raise RuntimeError('No compatible full-size Python parent is available. Compact networks train using the website network selector.')
                 parent=max(parents,key=lambda p:p.stat().st_mtime)
                 worker=[sys.executable,str(self.root/'continue_train.py'),'--parent',str(parent)]
             name=datetime.now(timezone.utc).strftime('%Y%m%dT%H%M%SZ')+'-'+uuid.uuid4().hex[:6]

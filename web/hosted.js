@@ -20,11 +20,13 @@ export async function detectHosting() {
   // Once hosted mode is explicit, missing/corrupt evidence is an error. Never
   // silently substitute a fictitious local API or an empty published archive.
   const [status,model] = await Promise.all([readJSON('/data/status.json'),readJSON('/data/model.json')]);
-  return new HostedTrainer(config,status,model);
+  const indexResponse=await fetch('/data/networks.json',{cache:'no-store'});
+  const index=indexResponse.ok?await indexResponse.json():null;
+  return new HostedTrainer(config,status,model,index);
 }
 
 class HostedTrainer {
-  constructor(config,status,model) {
+  constructor(config,status,model,index) {
     this.config=config;
     this.publishedStatus=copy(status);
     this.publishedModel=copy(model);
@@ -34,6 +36,13 @@ class HostedTrainer {
     this.teaching=null;
     this.archive=null;
     this.browserRun=false;
+    this.trainingNetworks=index?.networks?.length?copy(index.networks):[{
+      id:'published',label:'Published champion',model_url:'/data/model.json',parameters:model.parameter_count,
+      architecture:model.architecture,encoding:model.encoding,
+      no_loss_from_empty:status.evaluation?.independent?.no_loss_from_empty,
+    }];
+    this.selectedTrainingId=this.trainingNetworks.some(network=>network.id===index?.default_id)?index.default_id:this.trainingNetworks[0].id;
+    this.starting=false;
   }
 
   async request(path,options={}) {
@@ -48,12 +57,20 @@ class HostedTrainer {
     }
     const body=JSON.parse(options.body || '{}');
     if(path==='/api/train') {
-      if(this.worker) throw new Error('A browser experiment is already active.');
+      if(this.worker || this.starting) throw new Error('A browser experiment is already active.');
       if(typeof Worker==='undefined') throw new Error('This browser does not support background training workers.');
+      const trainingNetwork=this.trainingNetworks.find(network=>network.id===(body.network_id || this.selectedTrainingId));
+      if(!trainingNetwork) throw new Error('Choose an available training network.');
+      this.starting=true;
+      let parent;
+      try {parent=await readJSON(trainingNetwork.model_url);}
+      finally {this.starting=false;}
+      this.selectedTrainingId=trainingNetwork.id;
       this.browserRun=true;
       this.archive=null;
       this.state={...copy(this.publishedStatus),status:'starting',run_id:`browser-${body.seed}-${Date.now()}`,history:[],events:[],candidates:[],evaluation:{},selection:null,
-        recipe_note:'Visitor-local, single-branch continuation: three phases of 512 Adam updates, native collection, targeted review and protected replay. All reachable states are teaching data. This is finite-domain coverage, not a fresh held-out test. The published policy remains playable until a candidate passes its browser audit.'};
+        architecture:parent.architecture,parameter_count:parent.parameter_count,training_network:copy(trainingNetwork),
+        recipe_note:'Visitor-local, single-branch continuation: three phases of 512 Adam updates, native collection, targeted review and protected replay. All reachable states are teaching data. This is finite-domain coverage, not a fresh held-out test. The playable game keeps the published compact champion; trained weights are saved only in downloadable experiment evidence.'};
       this.worker=new Worker(new URL('./training-worker.js',import.meta.url),{type:'module'});
       this.worker.onmessage=event=>{
         const message=event.data;
@@ -61,7 +78,8 @@ class HostedTrainer {
         if(message.type==='complete') {
           this.state=message.status;
           this.archive=message.archive;
-          if(message.model) this.model=message.model;
+          // Experiments may use a larger architecture than the compact public
+          // champion. Their exports belong in the run download, never the game.
           this.worker?.terminate();this.worker=null;
         }
       };
@@ -69,7 +87,7 @@ class HostedTrainer {
         this.state={...this.state,status:'failed',error:event.message || 'Browser worker failed.'};
         this.worker?.terminate();this.worker=null;
       };
-      this.worker.postMessage({action:'start',seed:body.seed,run_id:this.state.run_id,parent:copy(this.publishedModel),teaching_url:'/data/teaching.json'});
+      this.worker.postMessage({action:'start',seed:body.seed,run_id:this.state.run_id,parent,training_network:copy(trainingNetwork),teaching_url:'/data/teaching.json'});
       return {run_id:this.state.run_id,status:'starting'};
     }
     if(path==='/api/control') {

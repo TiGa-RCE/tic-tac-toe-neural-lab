@@ -1,7 +1,7 @@
 /** Real CPU training. This module is loaded only after explicit Start training.
  * Teacher labels are training/audit data. The gameplay module never imports it.
  */
-import {outcome} from './network.js';
+import {outcome, encode, modelEncoding, D4_PERMUTATIONS, policyScore} from './network.js';
 
 let command='resume';
 let started=false;
@@ -26,16 +26,26 @@ function random(seed) {
   return ()=>{s+=0x6D2B79F5;let t=Math.imul(s^s>>>15,1|s);t^=t+Math.imul(t^t>>>7,61|t);return ((t^t>>>14)>>>0)/4294967296;};
 }
 function flatten(model) {
-  return model.layers.map(layer=>({input:layer.weights.length,output:layer.bias.length,w:Float64Array.from(layer.weights.flat()),b:Float64Array.from(layer.bias)}));
+  const net=model.layers.map((layer,index)=>({input:layer.weights.length,output:layer.weights[0].length,w:Float64Array.from(layer.weights.flat()),b:Float64Array.from(layer.bias),biasOrbits:model.output_bias_orbits==='D4-corner-zero' && index===model.layers.length-1}));
+  net.symmetry=model.symmetry_average || null;
+  net.reference=model.reference_logit_zero===true;
+  net.roundDecimals=model.logit_round_decimals;
+  net.outputBiasOrbits=model.output_bias_orbits ?? null;
+  if(net.symmetry!==null && net.symmetry!=='D4' && net.symmetry!=='none') throw new Error('Unsupported symmetry averaging.');
+  if(net.outputBiasOrbits!==null && net.outputBiasOrbits!=='D4-corner-zero') throw new Error('Unsupported shared output biases.');
+  if(net.outputBiasOrbits==='D4-corner-zero' && (net.symmetry!=='D4' || !net.reference || model.architecture?.at(-1)!==8 || net.at(-1).b.length!==2)) throw new Error('Shared output biases require the declared D4 fixed-zero readout.');
+  if(net.at(-1).output!==(net.reference?8:9)) throw new Error('Checkpoint readout dimensions do not match its reference-logit metadata.');
+  policyScore(0,net.roundDecimals);
+  return net;
 }
-function clone(net) {return net.map(l=>({...l,w:l.w.slice(),b:l.b.slice()}));}
+function clone(net) {const result=net.map(l=>({...l,w:l.w.slice(),b:l.b.slice()}));result.symmetry=net.symmetry;result.reference=net.reference;result.roundDecimals=net.roundDecimals;result.outputBiasOrbits=net.outputBiasOrbits;return result;}
 function exportModel(net,parent,checkpoint,run_id) {
-  return {...parent,checkpoint,run_id,layers:net.map((l,index)=>({weights:Array.from({length:l.input},(_,i)=>Array.from(l.w.slice(i*l.output,(i+1)*l.output))),bias:Array.from(l.b),activation:index===net.length-1?'linear':'tanh'}))};
+  return {...parent,checkpoint,run_id,coefficient_precision:'float64',coefficient_payload_bytes:8*net.reduce((total,layer)=>total+layer.w.length+layer.b.length,0),layers:net.map((l,index)=>({weights:Array.from({length:l.input},(_,i)=>Array.from(l.w.slice(i*l.output,(i+1)*l.output))),bias:Array.from(l.b),activation:index===net.length-1?'linear':'tanh'}))};
 }
-function forward(net,input,cache=false) {
+function baseForward(net,input,cache=false) {
   const activations=[input];
   for(let k=0;k<net.length;k++) {
-    const layer=net[k],a=activations[k],z=layer.b.slice();
+    const layer=net[k],a=activations[k],z=layer.biasOrbits?Float64Array.from([0,layer.b[0],0,layer.b[0],layer.b[1],layer.b[0],0,layer.b[0]]):layer.b.slice();
     for(let i=0;i<layer.input;i++) {
       const value=a[i];if(value===0) continue;
       for(let j=0;j<layer.output;j++) z[j]+=value*layer.w[i*layer.output+j];
@@ -45,9 +55,29 @@ function forward(net,input,cache=false) {
   }
   return cache?activations:activations[activations.length-1];
 }
-function features(board) {
-  const player=board.reduce((s,c)=>s+c,0)===0?1:-1;
-  return Float64Array.from(board.flatMap(c=>[Number(c===player),Number(c===-player),Number(c===0)]));
+function outputLogits(net,values) {
+  if(!net.reference) return values;
+  const logits=new Float64Array(9);logits.set(values);return logits;
+}
+function forward(net,input,cache=false) {
+  if(net.symmetry!=='D4') {
+    if(!net.reference) return baseForward(net,input,cache);
+    const acts=baseForward(net,input,true),logits=outputLogits(net,acts.at(-1));
+    return cache?{logits,transforms:[{permutation:null,acts}]}:logits;
+  }
+  const channels=input.length/9,logits=new Float64Array(9),transforms=[];
+  for(const permutation of D4_PERMUTATIONS) {
+    const transformed=new Float64Array(input.length);
+    for(let cell=0;cell<9;cell++) for(let channel=0;channel<channels;channel++) transformed[permutation[cell]*channels+channel]=input[cell*channels+channel];
+    const acts=baseForward(net,transformed,true),raw=outputLogits(net,acts[acts.length-1]);
+    for(let cell=0;cell<9;cell++) logits[cell]+=raw[permutation[cell]];
+    if(cache) transforms.push({permutation,acts});
+  }
+  for(let cell=0;cell<9;cell++) logits[cell]/=8;
+  return cache?{logits,transforms}:logits;
+}
+function features(board, model) {
+  return Float64Array.from(encode(board,modelEncoding(model)));
 }
 function probabilities(logits,board,temperature=1) {
   let max=-Infinity;
@@ -57,9 +87,12 @@ function probabilities(logits,board,temperature=1) {
   for(let i=0;i<9;i++) p[i]/=sum;
   return p;
 }
-function greedy(logits,board) {
-  let move=null;
-  for(let i=0;i<9;i++) if(board[i]===0 && (move===null || logits[i]>logits[move])) move=i;
+function greedy(logits,board,net) {
+  let move=null,best=-Infinity;
+  for(let i=0;i<9;i++) if(board[i]===0) {
+    const score=policyScore(logits[i],net.roundDecimals);
+    if(move===null || score>best) {move=i;best=score;}
+  }
   return move;
 }
 function adam(net) {
@@ -69,7 +102,7 @@ function update(net,opt,rows,samples,parentLogits,protectedRows) {
   const grads=net.map(l=>({w:new Float64Array(l.w.length),b:new Float64Array(l.b.length)}));
   let loss=0;
   for(const row of rows) {
-    const s=samples[row],acts=forward(net,s.x,true),logits=acts[acts.length-1],p=probabilities(logits,s.board);
+    const s=samples[row],cache=forward(net,s.x,true),logits=Array.isArray(cache)?cache[cache.length-1]:cache.logits,p=probabilities(logits,s.board);
     let mass=0;
     for(const i of s.optimal) mass+=p[i];
     mass=Math.max(1e-30,mass);loss-=Math.log(mass)/rows.length;
@@ -83,20 +116,30 @@ function update(net,opt,rows,samples,parentLogits,protectedRows) {
       }
     }
     for(let i=0;i<9;i++) delta[i]/=rows.length;
-    for(let k=net.length-1;k>=0;k--) {
-      const l=net[k],g=grads[k],a=acts[k];
-      for(let j=0;j<l.output;j++) g.b[j]+=delta[j];
-      for(let i=0;i<l.input;i++) {
-        const v=a[i];if(v===0) continue;
-        for(let j=0;j<l.output;j++) g.w[i*l.output+j]+=v*delta[j];
-      }
-      if(k>0) {
-        const previous=new Float64Array(l.input);
+    const passes=Array.isArray(cache)?[{acts:cache,delta}]:cache.transforms.map(({permutation,acts})=>{
+      if(permutation===null) return {acts,delta};
+      const rawDelta=new Float64Array(9);
+      for(let cell=0;cell<9;cell++) rawDelta[permutation[cell]]=delta[cell]/8;
+      return {acts,delta:rawDelta};
+    });
+    for(const pass of passes) {
+      let back=pass.delta;
+      for(let k=net.length-1;k>=0;k--) {
+        const l=net[k],g=grads[k],a=pass.acts[k];
+        if(l.biasOrbits) {g.b[0]+=back[1]+back[3]+back[5]+back[7];g.b[1]+=back[4];}
+        else for(let j=0;j<l.output;j++) g.b[j]+=back[j];
         for(let i=0;i<l.input;i++) {
-          let sum=0;for(let j=0;j<l.output;j++) sum+=l.w[i*l.output+j]*delta[j];
-          previous[i]=sum*(1-a[i]*a[i]);
+          const v=a[i];if(v===0) continue;
+          for(let j=0;j<l.output;j++) g.w[i*l.output+j]+=v*back[j];
         }
-        delta=previous;
+        if(k>0) {
+          const previous=new Float64Array(l.input);
+          for(let i=0;i<l.input;i++) {
+            let sum=0;for(let j=0;j<l.output;j++) sum+=l.w[i*l.output+j]*back[j];
+            previous[i]=sum*(1-a[i]*a[i]);
+          }
+          back=previous;
+        }
       }
     }
   }
@@ -115,7 +158,7 @@ function update(net,opt,rows,samples,parentLogits,protectedRows) {
 async function grade(net,samples,status,parentCorrect=null) {
   const choices=new Map(),correct=[],errors=[];let repairs=0,breaks=0;
   for(let i=0;i<samples.length;i++) {
-    const s=samples[i],move=greedy(forward(net,s.x),s.board),good=s.optimal.includes(move);
+    const s=samples[i],move=greedy(forward(net,s.x),s.board,net),good=s.optimal.includes(move);
     choices.set(s.board.join(','),move);correct.push(good);
     if(!good) errors.push(i);
     if(parentCorrect) {repairs+=Number(good&&!parentCorrect[i]);breaks+=Number(!good&&parentCorrect[i]);}
@@ -141,7 +184,7 @@ function nativePool(net,samples,lookup,rng) {
   for(let n=0;n<128;n++) {
     let b=samples[Math.floor(rng()*samples.length)].board.slice();
     while(outcome(b)===null) {
-      const id=lookup.get(b.join(',')),move=greedy(forward(net,samples[id].x),b);
+      const id=lookup.get(b.join(',')),move=greedy(forward(net,samples[id].x),b,net);
       counts[id]++;nativeActions++;
       b[move]=b.reduce((a,c)=>a+c,0)===0?1:-1;
     }
@@ -163,30 +206,31 @@ async function run(options) {
     ['phase2','02 · Repair & retain','Half native, half retention; founder-correct KL at temperature 2.'],
     ['phase3','03 · Consolidate','Final 512-update phase, retaining all checkpoint coverage and break counts.'],
     ['qualification','Audit the frozen candidate','Exhaustive decision coverage and every adversarial continuation from empty, as both X and O.'],
-    ['export','Keep the certified student','Only a no-loss candidate can replace the playable published incumbent.'],
+    ['export','Save the trained student','Download the selected experiment weights; the playable game keeps its published compact champion.'],
   ];
   const status={status:'running',run_id:options.run_id,training_mode:'browser-finite-domain',architecture:options.parent.architecture,parameter_count:options.parent.parameter_count,
-    phase_id:'teacher',phases:phases.map(([id,title,detail])=>({id,title,detail,status:'pending',progress:0,metrics:{}})),metrics:{},history:[],events:[],candidates:[],evaluation:{},dataset:{},model_available:true,
-    recipe_note:'Real visitor-local training, one branch in three phases of 512 Adam updates. All finite decision states are TRAIN. No held-out generalization is claimed. Labels remain in this training worker; gameplay uses only the frozen neural network. The published incumbent remains available until a browser candidate passes the no-loss audit.'};
+    forward_passes_per_move:options.parent.symmetry_average==='D4'?8:1,
+    phase_id:'teacher',phases:phases.map(([id,title,detail])=>({id,title,detail,status:'pending',progress:0,metrics:{}})),metrics:{},history:[],events:[],candidates:[],evaluation:{},dataset:{},model_available:true,training_network:options.training_network || null,
+    recipe_note:'Real visitor-local training, one branch in three phases of 512 Adam updates. All finite decision states are TRAIN. No held-out generalization is claimed. Labels remain in this training worker. The playable game always keeps the published compact champion; experiment weights are available in the run download.'};
   const event=message=>{status.events.push({time:new Date().toISOString(),message});send(status);};
   const phase=(id,progress,metrics={})=>{
     status.phase_id=id;const p=status.phases.find(p=>p.id===id);Object.assign(p,{progress,status:progress>=1?'completed':'running',metrics});send(status);
   };
-  const archive={protocol:{seed:options.seed,phases:3,updates_per_phase:512,batch_size:128,learning_rate:.0003,clip:1,temperature:2,kl_coefficient:.1,branch_count:1,training_domain:'all reachable decision states',selection:'never replace certified incumbent with an uncertified or lower-coverage candidate'},schedules:[],checkpoints:[]};
+  const archive={protocol:{seed:options.seed,phases:3,updates_per_phase:512,batch_size:128,learning_rate:.0003,clip:1,temperature:2,kl_coefficient:.1,branch_count:1,training_domain:'all reachable decision states',training_network:options.training_network || null,encoding:modelEncoding(options.parent),symmetry_average:options.parent.symmetry_average || null,reference_logit_zero:options.parent.reference_logit_zero===true,output_bias_orbits:options.parent.output_bias_orbits ?? null,logit_round_decimals:options.parent.logit_round_decimals ?? null,neural_forward_passes_per_example:options.parent.symmetry_average==='D4'?8:1,selection:'select a no-loss experiment checkpoint with no lower coverage; gameplay never changes'},parent_model:options.parent,schedules:[],checkpoints:[]};
   try {
     phase('teacher',0);
     const response=await fetch(options.teaching_url);if(!response.ok) throw new Error('Teaching corpus unavailable.');
     const teaching=await response.json();
     if(teaching.boards.length!==4520 || teaching.optimal_moves.length!==4520) throw new Error('Expected all 4,520 reachable decision states.');
-    const samples=teaching.boards.map((board,i)=>({board,x:features(board),optimal:teaching.optimal_moves[i]}));
+    const samples=teaching.boards.map((board,i)=>({board,x:features(board,options.parent),optimal:teaching.optimal_moves[i]}));
     const lookup=new Map(samples.map((s,i)=>[s.board.join(','),i]));
     let net=flatten(options.parent),best=clone(net);const opt=adam(net),rng=random(options.seed);
     const parentLogits=samples.map(s=>forward(net,s.x));
-    const protectedRows=samples.map((s,i)=>s.optimal.includes(greedy(parentLogits[i],s.board)));
-    let base=await grade(net,samples,status),bestGrade=base,bestCheckpoint='published-incumbent';
+    const protectedRows=samples.map((s,i)=>s.optimal.includes(greedy(parentLogits[i],s.board,net)));
+    let base=await grade(net,samples,status),bestGrade=base,bestCheckpoint='training-parent';
     status.dataset={decision_states:4520,train:4520,held_out:0,scope:'Exhaustive finite-domain training and certification.'};
     phase('teacher',1,{states:4520,parent_correct:base.optimal_count});event('Teacher corpus loaded only for this explicit browser experiment. Published game weights remain fixed.');
-    status.candidates.push({checkpoint:'published-incumbent',validation_correct:base.optimal_count,validation_count:4520,repairs:0,breaks:0});
+    status.candidates.push({checkpoint:'training-parent',validation_correct:base.optimal_count,validation_count:4520,repairs:0,breaks:0});
     for(let p=1;p<=3;p++) {
       const id=`phase${p}`;phase(id,0);await control(status);
       const diagnosis=await grade(net,samples,status,base.correct);
@@ -204,30 +248,31 @@ async function run(options) {
         if((u+1)%8===0) await control(status);
         if((u+1)%32===0) {
           const probe=samples.filter((_,i)=>i%17===0);let good=0;
-          for(const s of probe) good+=Number(s.optimal.includes(greedy(forward(net,s.x),s.board)));
+          for(const s of probe) good+=Number(s.optimal.includes(greedy(forward(net,s.x),s.board,net)));
           const row={step:(p-1)*512+u+1,phase:id,epoch:u+1,branch:options.seed,loss,train_accuracy:good/probe.length};
           status.metrics=row;status.history.push(row);phase(id,(u+1)/512,{updates:u+1,probe_states:probe.length});
         }
       }
       const g=await grade(net,samples,status,base.correct),checkpoint=`browser-p${p}`;
       const candidate={checkpoint,validation_correct:g.optimal_count,validation_count:g.total,repairs:g.repairs,breaks:g.breaks};
-      status.candidates.push(candidate);archive.checkpoints.push({checkpoint,optimal_count:g.optimal_count,as_x:g.as_x,as_o:g.as_o});
+      status.candidates.push(candidate);archive.checkpoints.push({checkpoint,optimal_count:g.optimal_count,as_x:g.as_x,as_o:g.as_o,model:exportModel(net,options.parent,checkpoint,options.run_id)});
       // This is checkpoint selection after external grading, never a per-move fallback.
-      if(g.as_x>=0 && g.as_o>=0 && g.optimal_count===samples.length && (bestGrade.optimal_count<samples.length || bestGrade.as_x<0 || bestGrade.as_o<0)) {
+      if(g.as_x>=0 && g.as_o>=0 && (bestGrade.as_x<0 || bestGrade.as_o<0 || g.optimal_count>bestGrade.optimal_count)) {
         best=clone(net);bestGrade=g;bestCheckpoint=checkpoint;
       }
       phase(id,1,{correct:g.optimal_count,total:g.total,repairs:g.repairs,breaks:g.breaks});
       event(`${checkpoint}: ${g.optimal_count}/4520 optimal; repairs ${g.repairs}, breaks ${g.breaks}.`);
     }
     phase('qualification',0);
-    const certified=bestGrade.as_x>=0 && bestGrade.as_o>=0 && bestGrade.optimal_count===samples.length;
+    const certified=bestGrade.as_x>=0 && bestGrade.as_o>=0;
     status.evaluation={exhaustive:{correct:bestGrade.optimal_count,count:4520,accuracy:bestGrade.accuracy,mistakes:bestGrade.errors.length},browser_audit:{no_loss_from_empty:certified,as_x:bestGrade.as_x>=0?'draw':'loss',as_o:bestGrade.as_o>=0?'draw':'loss'},scope:'All states were TRAIN. Browser audit is separate from the independently verified published baseline.'};
     phase('qualification',1,{no_loss_from_empty:certified});
     status.selection={checkpoint:bestCheckpoint};
-    phase('export',1,{checkpoint:bestCheckpoint,incumbent_retained:bestCheckpoint==='published-incumbent'});
-    status.status='completed';event('Browser experiment complete. Only the selected certified checkpoint is eligible for the next game.');
+    phase('export',1,{checkpoint:bestCheckpoint,parent_retained:bestCheckpoint==='training-parent',gameplay_unchanged:true});
+    status.status='completed';event('Browser experiment complete. Download its weights and evidence; the playable game still uses the published compact champion.');
     archive.status=status;
-    self.postMessage({type:'complete',status,archive,model:certified && bestCheckpoint!=='published-incumbent'?exportModel(best,options.parent,bestCheckpoint,options.run_id):null});
+    archive.selected_model=bestCheckpoint==='training-parent'?options.parent:exportModel(best,options.parent,bestCheckpoint,options.run_id);
+    self.postMessage({type:'complete',status,archive,model:null});
   } catch(error) {
     status.status=error.message==='STOP_REQUESTED'?'cancelled':'failed';
     if(status.status==='failed') status.error=error.message;

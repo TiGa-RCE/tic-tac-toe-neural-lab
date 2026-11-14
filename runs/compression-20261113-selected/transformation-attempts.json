@@ -1,0 +1,1 @@
+[{"checkpoint":"compact-38-float16","parameters":38,"precision":"float16","no_loss_from_empty":true,"optimal_count":3888,"total":4520,"portable":{"positions":4520,"action_mismatches":0,"max_logit_error":5.329070518200751e-15,"tolerance":1e-09,"optimal_count":3888,"passed":true},"model_sha256":"9b3b98f4b995c0c434bdd248ca2042844485379d0f999751b7e0f40296277632"}]

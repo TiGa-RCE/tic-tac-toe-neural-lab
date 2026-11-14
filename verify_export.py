@@ -81,9 +81,25 @@ def _finite_number(value):
 def validate_model(model):
     architecture = model.get("architecture")
     if (not isinstance(architecture, list) or len(architecture) < 2
-            or architecture[0] != 27 or architecture[-1] != 9
+            or architecture[0] not in (9, 18, 27) or architecture[-1] not in (8,9)
             or any(type(size) is not int or not 1 <= size <= 1024 for size in architecture)):
-        raise ValueError("Expected a bounded 27-input, 9-output dense architecture")
+        raise ValueError("Expected a bounded 9/18/27-input, 9-output dense architecture")
+    encoding = model.get('encoding', {9:'relative-signed',18:'relative-two-channel',27:'relative-one-hot-interleaved'}[architecture[0]])
+    widths = {'relative-signed':9,'relative-two-channel':18,'relative-one-hot-interleaved':27}
+    if encoding not in widths or widths[encoding] != architecture[0]:
+        raise ValueError('Encoding metadata does not match the input width')
+    if model.get('symmetry_average') not in (None,'D4'):
+        raise ValueError('Unrecognized symmetry aggregation')
+    if (architecture[-1] == 8) != (model.get('reference_logit_zero') is True):
+        raise ValueError('Eight learned readouts require a fixed zero reference logit')
+    rounding=model.get('logit_round_decimals')
+    if rounding is not None and (type(rounding) is not int or not 0<=rounding<=12):
+        raise ValueError('Unsupported score rounding')
+    orbit_bias=model.get('output_bias_orbits')
+    if orbit_bias not in (None,'D4-corner-zero'):
+        raise ValueError('Unsupported shared output bias')
+    if orbit_bias and (model.get('symmetry_average')!='D4' or architecture[-1]!=8):
+        raise ValueError('Shared orbit bias requires D4 and eight learned readouts')
     layers = model.get("layers")
     if not isinstance(layers, list) or len(layers) != len(architecture) - 1:
         raise ValueError("Layer count does not match architecture")
@@ -95,7 +111,8 @@ def validate_model(model):
                        or any(not _finite_number(value) for value in row)
                        for row in weights)):
             raise ValueError(f"Layer {index} weights have invalid dimensions or nonfinite values")
-        if (not isinstance(bias, list) or len(bias) != n_output
+        bias_width=2 if orbit_bias and index==len(layers)-1 else n_output
+        if (not isinstance(bias, list) or len(bias) != bias_width
                 or any(not _finite_number(value) for value in bias)):
             raise ValueError(f"Layer {index} bias has invalid dimensions or nonfinite values")
         expected_activation = "linear" if index == len(layers) - 1 else "tanh"
@@ -104,9 +121,15 @@ def validate_model(model):
     return architecture
 
 
-def encode(board):
+def encode(board, encoding='relative-one-hot-interleaved'):
     """Cell-major [own, opponent, empty] one-hot encoding, next-player view."""
     next_mark = 1 if sum(board) == 0 else -1
+    if encoding == 'relative-signed':
+        return [float(cell*next_mark) for cell in board]
+    if encoding == 'relative-two-channel':
+        return [value for cell in board for value in (float(cell==next_mark),float(cell==-next_mark))]
+    if encoding != 'relative-one-hot-interleaved':
+        raise ValueError('Unrecognized board encoding')
     values = []
     for cell in board:
         relative = cell * next_mark
@@ -114,17 +137,39 @@ def encode(board):
     return values
 
 
-def predict(model, board):
-    values = encode(board)
-    for layer in model["layers"]:
+def _dense_predict(model, board):
+    encoding=model.get('encoding',{9:'relative-signed',18:'relative-two-channel',27:'relative-one-hot-interleaved'}[model['architecture'][0]])
+    values = encode(board,encoding)
+    for index,layer in enumerate(model["layers"]):
         weights, bias = layer["weights"], layer["bias"]
+        if model.get('output_bias_orbits') and index==len(model['layers'])-1:
+            edge,center=bias
+            bias=[0.,edge,0.,edge,center,edge,0.,edge]
         values = [bias[j] + sum(value * weights[i][j] for i, value in enumerate(values))
                   for j in range(len(bias))]
         if layer["activation"] == "tanh":
             values = [math.tanh(value) for value in values]
     if any(not math.isfinite(value) for value in values):
         raise ValueError("Inference produced a nonfinite output")
+    if model.get('reference_logit_zero') is True:values.append(0.)
     return values
+
+def predict(model, board):
+    if model.get('symmetry_average') != 'D4':
+        return _dense_predict(model,board)
+    # Independent coordinate implementation; no training/runtime helper import.
+    total=[0.0]*9
+    for flip in (False,True):
+        for rotations in range(4):
+            transformed=[0]*9; mapping=[]
+            for old in range(9):
+                y,x=old//3,old%3
+                x=2-x if flip else x
+                for turn in range(rotations):y,x=x,2-y
+                new=y*3+x;mapping.append(new);transformed[new]=board[old]
+            logits=_dense_predict(model,transformed)
+            for old in range(9):total[old]+=logits[mapping[old]]
+    return [v/8 for v in total]
 
 
 def qualify(model, include_fixtures=False):
@@ -141,8 +186,10 @@ def qualify(model, include_fixtures=False):
     optimal_count = 0
     for board in decisions:
         logits = predict(model, board)
+        decimals=model.get('logit_round_decimals')
+        keys=logits if decimals is None else [math.floor(v*10**decimals+.5) for v in logits]
         move = max((index for index, cell in enumerate(board) if cell == 0),
-                   key=lambda index: logits[index])
+                   key=lambda index: keys[index])
         optimal = exact_moves(board)
         choices[board] = move
         if move in optimal:
@@ -181,9 +228,11 @@ def qualify(model, include_fixtures=False):
         "run_id": model.get("run_id"),
         "checkpoint": model.get("checkpoint"),
         "architecture": architecture,
-        "parameter_count": sum((a + 1) * b for a, b in zip(architecture, architecture[1:])),
-        "encoding": "cell-major-own-opponent-empty",
-        "tie_break": "lowest legal cell index",
+        "parameter_count": sum(sum(len(row) for row in layer['weights'])+len(layer['bias']) for layer in model['layers']),
+        "symmetry_average": model.get('symmetry_average'),
+        "forward_passes_per_move": 8 if model.get('symmetry_average')=='D4' else 1,
+        "encoding": model.get('encoding', {9:'relative-signed',18:'relative-two-channel',27:'relative-one-hot-interleaved'}[architecture[0]]),
+        "tie_break": "lowest legal cell index" if model.get('logit_round_decimals') is None else f"floor(logit*10^{model['logit_round_decimals']}+0.5), then lowest legal cell index",
         "reachable_count": len(states),
         "total": len(decisions),
         "optimal_count": optimal_count,
