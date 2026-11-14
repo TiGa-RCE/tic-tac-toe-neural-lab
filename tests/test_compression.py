@@ -299,7 +299,11 @@ class DerivedCompressionArtifactTests(unittest.TestCase):
         cls.runs = []
         for protocol in (ROOT / 'runs').glob('*/transformation-before-qualification.json'):
             path = protocol.parent / 'status.json'
-            if path.exists() and read(path).get('status') == 'completed':
+            source = ROOT / 'runs' / read(protocol)['source_run']
+            # This class certifies the historical compression derivation.
+            # Full-domain perfect exports have a separate protocol and tests.
+            if (path.exists() and read(path).get('status') == 'completed'
+                    and (source / 'compression-protocol.json').exists()):
                 cls.runs.append(protocol.parent)
         if not cls.runs:
             raise unittest.SkipTest('No independently qualified derived compression export yet')

@@ -18,8 +18,10 @@
       "output_bias_orbits": "D4-corner-zero",
       "coefficient_precision": "float16",
       "no_loss_from_empty": true,
+      "perfect_policy": false,
       "optimal_count": 3888,
-      "total": 4520
+      "total": 4520,
+      "certification_url": "/data/networks/compact-certification.json"
     },
     {
       "id": "dense",
@@ -38,8 +40,32 @@
       "output_bias_orbits": null,
       "coefficient_precision": "float64",
       "no_loss_from_empty": true,
+      "perfect_policy": false,
       "optimal_count": 3800,
-      "total": 4520
+      "total": 4520,
+      "certification_url": "/data/networks/dense-certification.json"
+    },
+    {
+      "id": "perfect-compact",
+      "label": "Compact fully optimal network",
+      "model_url": "/data/networks/perfect-compact.json",
+      "parameters": 74,
+      "architecture": [
+        9,
+        4,
+        8
+      ],
+      "encoding": "relative-signed",
+      "symmetry_average": "D4",
+      "forward_passes_per_move": 8,
+      "reference_logit_zero": true,
+      "output_bias_orbits": "D4-corner-zero",
+      "coefficient_precision": "float32",
+      "no_loss_from_empty": true,
+      "perfect_policy": true,
+      "optimal_count": 4520,
+      "total": 4520,
+      "certification_url": "/data/networks/perfect-compact-certification.json"
     },
     {
       "id": "original",
@@ -59,8 +85,10 @@
       "output_bias_orbits": null,
       "coefficient_precision": "float64",
       "no_loss_from_empty": true,
+      "perfect_policy": true,
       "optimal_count": 4520,
-      "total": 4520
+      "total": 4520,
+      "certification_url": "/data/networks/original-certification.json"
     }
   ]
 }

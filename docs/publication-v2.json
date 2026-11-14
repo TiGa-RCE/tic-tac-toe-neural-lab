@@ -1,0 +1,30 @@
+{
+  "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "access_mode": "public",
+  "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
+  "site_version": 2,
+  "site_source_commit": "bbf55796ffff9d8f83e92b5e4ff43ea880c98f10",
+  "site_deployment_id": "appgdep_6af7a92beea881918888ef3b70150585",
+  "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
+  "model_sha256": "9b3b98f4b995c0c434bdd248ca2042844485379d0f999751b7e0f40296277632",
+  "model_parameters": 38,
+  "coefficient_precision": "float16-values",
+  "coefficient_payload_bytes": 76,
+  "arithmetic": "JavaScript double",
+  "forward_passes_per_move": 8,
+  "training_networks": [
+    38,
+    123,
+    6537
+  ],
+  "ordinary_tests_passed": 39,
+  "live_browser_verified": true,
+  "qualification": {
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "optimal_decisions": 3888,
+    "total_decisions": 4520,
+    "browser_action_mismatches": 0
+  },
+  "minimality_scope": "Smallest verified result found in bounded registered search; no global minimality proof."
+}

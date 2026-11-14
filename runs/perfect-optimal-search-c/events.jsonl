@@ -1,0 +1,12 @@
+{"time": "2026-11-14T00:58:21.239480+00:00", "message": "Exact optimal-action sets admitted for all 4,520 boards. No safe-only target relaxation is used."}
+{"time": "2026-11-14T00:58:21.276498+00:00", "message": "9-4-9-d4, seed 11, phase 1: saved literal schedule; 20 optimality errors."}
+{"time": "2026-11-14T00:58:21.617152+00:00", "message": "9-4-9-d4, seed 11, phase 2: saved literal schedule; 92 optimality errors."}
+{"time": "2026-11-14T00:58:21.955924+00:00", "message": "9-4-9-d4, seed 11, phase 3: saved literal schedule; 80 optimality errors."}
+{"time": "2026-11-14T00:58:22.277777+00:00", "message": "9-4-9-d4, seed 11, phase 4: saved literal schedule; 92 optimality errors."}
+{"time": "2026-11-14T00:58:22.626081+00:00", "message": "9-4-9-d4, seed 11, phase 5: saved literal schedule; 52 optimality errors."}
+{"time": "2026-11-14T00:58:22.955495+00:00", "message": "9-4-9-d4, seed 11, phase 6: saved literal schedule; 28 optimality errors."}
+{"time": "2026-11-14T00:58:23.303086+00:00", "message": "9-4-9-d4, seed 11, phase 7: saved literal schedule; 32 optimality errors."}
+{"time": "2026-11-14T00:58:23.643472+00:00", "message": "9-4-9-d4, seed 11, phase 8: saved literal schedule; 16 optimality errors."}
+{"time": "2026-11-14T00:58:23.984338+00:00", "message": "9-4-9-d4, seed 11, phase 9: saved literal schedule; 4 optimality errors."}
+{"time": "2026-11-14T00:58:23.998866+00:00", "message": "Full optimality: 9-4-9-d4, seed 11, 74 planned folded coefficients; 4,520/4,520 under the declared score rule."}
+{"time": "2026-11-14T00:58:24.002088+00:00", "message": "A full-domain winner is frozen. Algebraic/precision folding and independent browser qualification remain separate required gates."}

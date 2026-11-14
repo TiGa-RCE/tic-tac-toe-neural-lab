@@ -1,0 +1,1 @@
+{"architecture":[9,4,9],"symmetry_average":"D4","forward_passes_per_move":8,"parameters":85,"effective_parameters":74,"seed":11,"phase":5,"update":160,"checkpoint":"a9-4-9-d4-s11-p5-u160","optimal_count":4516,"total":4520,"perfect_policy":false,"minimum_optimal_vs_suboptimal_logit_margin":-0.09462205561480563,"loss":0.23716983685823456}

@@ -1,0 +1,9 @@
+{
+  "run_id": "perfect-optimal-74",
+  "parameter_count": 74,
+  "optimal_count": 4520,
+  "total": 4520,
+  "qualification": "independent exhaustive optimality and exact browser-action parity",
+  "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+  "minimality_scope": "Smallest verified in the retained bounded search; no global minimum proof."
+}

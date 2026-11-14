@@ -146,13 +146,22 @@ function renderTrainingChoices() {
   $('training-network-note').hidden=!hosted;
   if(!hosted) return;
   const networks=hosted.trainingNetworks;
-  const signature=JSON.stringify(networks.map(network=>[network.id,network.label,network.parameters,network.architecture,network.symmetry_average,network.output_bias_orbits]));
+  const coverageLabel=network=>finite(network.optimal_count)&&finite(network.total)&&network.total>0
+    ? network.optimal_count===network.total?'100% optimal':`${percent(network.optimal_count/network.total)} optimal`
+    : 'Coverage not recorded';
+  const signature=JSON.stringify(networks.map(network=>[network.id,network.label,network.parameters,network.architecture,network.symmetry_average,network.output_bias_orbits,network.optimal_count,network.total,network.no_loss_from_empty]));
   if($('training-network').dataset.catalog!==signature) {
-    $('training-network').innerHTML=networks.map(network=>`<option value="${escape(network.id)}">${escape(network.label || network.id)} · ${escape(number(network.parameters))} parameters · ${escape((network.architecture || []).join(' → '))}${network.reference_logit_zero===true || network.architecture?.at(-1)===8?' + fixed 0':''}${network.output_bias_orbits==='D4-corner-zero'?' · shared bias':''}${network.symmetry_average==='D4'?' · 8 passes':''}</option>`).join('');
+    $('training-network').innerHTML=networks.map(network=>`<option value="${escape(network.id)}">${escape(network.label || network.id)} · ${escape(number(network.parameters))} parameters · ${escape(coverageLabel(network))} · ${escape((network.architecture || []).join(' → '))}${network.reference_logit_zero===true || network.architecture?.at(-1)===8?' + fixed 0':''}${network.output_bias_orbits==='D4-corner-zero'?' · shared bias':''}${network.symmetry_average==='D4'?' · 8 passes':''}</option>`).join('');
     $('training-network').dataset.catalog=signature;
   }
   $('training-network').value=hosted.selectedTrainingId;
-  $('training-network-note').textContent=`This choice trains only the browser experiment. The playable game keeps the published ${number(hosted.publishedModel.parameter_count)}-parameter champion; experiment weights are available in the run download.`;
+  const selected=networks.find(network=>network.id===hosted.selectedTrainingId);
+  const coverage=selected&&finite(selected.optimal_count)&&finite(selected.total)&&selected.total>0
+    ? selected.optimal_count===selected.total
+      ? `Training parent: independently optimal on all ${number(selected.total)} reachable decision boards.`
+      : `Training parent: ${number(selected.optimal_count)} / ${number(selected.total)} optimal decisions (${percent(selected.optimal_count/selected.total)}).${selected.no_loss_from_empty===true?' Independently non-losing as X and O from empty.':''}`
+    : 'No exhaustive optimal-decision count is recorded for this training parent.';
+  $('training-network-note').textContent=`${coverage} This choice trains only the browser experiment. The playable game keeps the published ${number(hosted.publishedModel.parameter_count)}-parameter champion; experiment weights are available in the run download.`;
 }
 
 function renderStatus(status) {
@@ -384,7 +393,7 @@ $('start').addEventListener('click',()=>{
   if(!Number.isInteger(seed)||seed<0||seed>2147483647) {showError('Choose an integer seed from 0 to 2,147,483,647.');return;}
   trainingAction('/api/train',{seed,mode:latestStatus?.model_available?'continue':'foundation',...(hosted?{network_id:$('training-network').value}:{})});
 });
-$('training-network').addEventListener('change',()=>{if(hosted) hosted.selectedTrainingId=$('training-network').value;});
+$('training-network').addEventListener('change',()=>{if(hosted) {hosted.selectedTrainingId=$('training-network').value;renderTrainingChoices();}});
 for(const action of ['pause','resume','stop']) $(action).addEventListener('click',()=>trainingAction('/api/control',{action}));
 $('new-game').addEventListener('click',newGame);
 $('side').addEventListener('change',newGame);
