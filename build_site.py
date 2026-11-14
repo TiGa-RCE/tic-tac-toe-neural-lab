@@ -26,15 +26,18 @@ def build(run, output, repository_url, site_url):
     # Full scalar fixtures belong in GitHub evidence; public certification is small.
     public_audit={k:v for k,v in evidence.items() if k!='fixtures'}
     (data/'certification.json').write_text(json.dumps(public_audit,separators=(',',':')))
-    selected_model=json.loads((run/'model.json').read_text())
+    selected_sha=hashlib.sha256((run/'model.json').read_bytes()).hexdigest()
     catalog=[]
+    default_id=None
     perfect_run=ROOT/'runs/perfect-optimal-selected'
     perfect_index=ROOT/'runs/perfect-optimal-selection.json'
     if perfect_index.exists():
         name=json.loads(perfect_index.read_text())['run_id']
         if Path(name).name!=name:raise ValueError('Perfect model registry must contain a run name, not a path.')
         perfect_run=ROOT/'runs'/name
-    choices=[('compact','Smallest verified shared network',run),
+    compact_run=ROOT/'runs/compression-20261113-selected'
+    if not (compact_run/'model.json').exists():compact_run=run
+    choices=[('compact','Smallest verified shared network',compact_run),
              ('dense','Compact dense network (one pass)',ROOT/'runs/compression-20261113-a'),
              ('perfect-compact','Compact fully optimal network',perfect_run),
              ('original','Original perfect network',ROOT/'runs/20261113T233235Z-7e5be6')]
@@ -53,17 +56,21 @@ def build(run, output, repository_url, site_url):
         if sha in seen:continue
         seen.add(sha)
         if not qualification['no_loss_from_empty'] or not parity['passed']:continue
+        if sha==selected_sha:default_id=identifier
         shutil.copyfile(folder/'model.json',model_dir/(identifier+'.json'))
         (model_dir/(identifier+'-certification.json')).write_text(json.dumps({k:v for k,v in qualification.items() if k!='fixtures'},separators=(',',':')))
         catalog.append({'id':identifier,'label':label,'model_url':'/data/networks/'+identifier+'.json',
                         'parameters':candidate['parameter_count'],'architecture':candidate['architecture'],'encoding':candidate['encoding'],
+                        'model_sha256':sha,
                         'symmetry_average':candidate.get('symmetry_average'),'forward_passes_per_move':candidate.get('forward_passes_per_move',1),
                         'reference_logit_zero':candidate.get('reference_logit_zero',False),'output_bias_orbits':candidate.get('output_bias_orbits'),
                         'coefficient_precision':candidate.get('coefficient_precision','float64'),
                         'no_loss_from_empty':True,'perfect_policy':qualification.get('perfect_policy',False),
                         'optimal_count':qualification['optimal_count'],'total':qualification['total'],
                         'certification_url':'/data/networks/'+identifier+'-certification.json'})
-    (data/'networks.json').write_text(json.dumps({'default_id':catalog[0]['id'],'networks':catalog},indent=2)+'\n')
+    if default_id is None:raise ValueError('The published default must appear in the qualified network catalog.')
+    (data/'networks.json').write_text(json.dumps({'default_id':default_id,'default_game_id':default_id,
+                                                'default_training_id':default_id,'networks':catalog},indent=2)+'\n')
     if (run/'coefficients.bin').exists():shutil.copyfile(run/'coefficients.bin',data/'coefficients.bin')
     boards=[b for b in enumerate_states() if winner(b) is None]
     labels=[solve(b) for b in boards]

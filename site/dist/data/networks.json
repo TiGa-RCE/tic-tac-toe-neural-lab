@@ -1,5 +1,7 @@
 {
-  "default_id": "compact",
+  "default_id": "perfect-compact",
+  "default_game_id": "perfect-compact",
+  "default_training_id": "perfect-compact",
   "networks": [
     {
       "id": "compact",
@@ -12,6 +14,7 @@
         8
       ],
       "encoding": "relative-signed",
+      "model_sha256": "9b3b98f4b995c0c434bdd248ca2042844485379d0f999751b7e0f40296277632",
       "symmetry_average": "D4",
       "forward_passes_per_move": 8,
       "reference_logit_zero": true,
@@ -34,6 +37,7 @@
         9
       ],
       "encoding": "relative-signed",
+      "model_sha256": "14842bf31a9ec0531018f9614b96215eed45b0487307bdd5e02c9c6d5c1a10b3",
       "symmetry_average": null,
       "forward_passes_per_move": 1,
       "reference_logit_zero": false,
@@ -56,6 +60,7 @@
         8
       ],
       "encoding": "relative-signed",
+      "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
       "symmetry_average": "D4",
       "forward_passes_per_move": 8,
       "reference_logit_zero": true,
@@ -79,6 +84,7 @@
         9
       ],
       "encoding": "relative-one-hot-interleaved",
+      "model_sha256": "33fd1b45032765e264dd66a3ceb239544ac20b59e77e69659f23ae6a66718072",
       "symmetry_average": null,
       "forward_passes_per_move": 1,
       "reference_logit_zero": false,

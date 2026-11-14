@@ -27,7 +27,7 @@
           <div class="panel control-panel">
             <div class="run-line"><div><span class="micro">CURRENT RUN</span><div id="run-id" class="mono muted">No run yet</div></div><label class="seed-label">Seed <input id="seed" type="number" value="42" min="0" max="2147483647" step="1" aria-label="Training seed"></label></div>
             <label id="training-network-label" class="training-network-label" hidden><span>Training network</span><select id="training-network" aria-label="Training network"></select></label>
-            <p id="training-network-note" class="caption" hidden>Choose the network for this browser experiment. The playable game keeps the published compact champion.</p>
+            <p id="training-network-note" class="caption" hidden>Choose the network for this browser experiment. Choose your opponent separately in the play panel.</p>
             <div class="actions"><button id="start" class="primary">Start training <span aria-hidden="true">↗</span></button><button id="pause">Pause</button><button id="resume" hidden>Resume</button><button id="stop" class="quiet">Stop</button></div>
             <p id="training-note" class="caption">Shared founder → three refinement phases → sealed qualification. Every phase reports real measurements.</p>
             <div class="hosted-actions"><button id="published-run" class="text-button" hidden>View published run</button><button id="download-run" class="text-button" hidden>Download browser run evidence ↓</button></div>
@@ -58,6 +58,8 @@
         <aside class="play-column" aria-labelledby="play-title">
           <div class="section-heading"><div><span class="micro">02 / PLAY</span><h2 id="play-title">Meet the student</h2></div><span class="play-icon" aria-hidden="true">× ○</span></div>
           <section class="panel game-panel">
+            <label id="game-network-label" class="game-network-label" hidden>Opponent network <select id="game-network" aria-label="Opponent network"></select></label>
+            <p id="game-network-note" class="caption" hidden>Changing the opponent starts a new game.</p>
             <div class="players"><div><span class="player-symbol human">×</span><div><strong>You</strong><small id="human-symbol">Playing X</small></div></div><span class="versus">VS</span><div><span class="player-symbol neural">○</span><div><strong>Neural network</strong><small id="network-symbol">Playing O</small></div></div></div>
             <div id="game-status" class="game-status" role="status" aria-live="polite">Waiting for a trained checkpoint</div>
             <p id="play-proof" class="play-proof" hidden></p>
@@ -65,7 +67,7 @@
             <div id="board" class="board" aria-label="Tic-tac-toe board"></div>
             <div class="game-controls"><label>You play <select id="side" aria-label="Choose your side"><option value="1">X · first</option><option value="-1">O · second</option></select></label><button id="new-game">New game <span aria-hidden="true">↻</span></button></div>
             <label class="toggle"><input type="checkbox" id="show-scores" checked><span>Show policy probabilities</span></label><label class="toggle"><input type="checkbox" id="teacher-overlay"><span>Compare with the exact teacher</span></label><p id="teacher-note" class="teacher-note" hidden></p>
-            <div class="checkpoint"><span class="micro">GAME CHECKPOINT</span><strong id="checkpoint">No model loaded</strong><p>Weights stay fixed during a game. New game loads the latest saved checkpoint.</p></div>
+            <div class="checkpoint"><span class="micro">GAME CHECKPOINT</span><strong id="checkpoint">No model loaded</strong><p>Weights stay fixed during a game. New game loads your selected opponent.</p></div>
             <button id="export" class="text-button" disabled>Download these weights <span aria-hidden="true">↓</span></button>
           </section>
           <section class="how-it-works"><span class="micro">WHAT MAKES THE MOVE?</span><p id="inference-explanation">The student scores the nine cells in one forward pass. Occupied cells are masked; the highest legal policy score chooses the move.</p><p>The deterministic solver supplies training labels and audits. It is never called to choose the student's move.</p><div class="flow"><span>Board</span><b>→</b><span>Network</span><b>→</b><span>Move</span></div></section>

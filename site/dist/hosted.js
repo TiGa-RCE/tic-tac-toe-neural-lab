@@ -41,13 +41,23 @@ class HostedTrainer {
       architecture:model.architecture,encoding:model.encoding,
       no_loss_from_empty:status.evaluation?.independent?.no_loss_from_empty,
     }];
-    this.selectedTrainingId=this.trainingNetworks.some(network=>network.id===index?.default_id)?index.default_id:this.trainingNetworks[0].id;
+    const availableDefault=id=>this.trainingNetworks.some(network=>network.id===id)?id:this.trainingNetworks[0].id;
+    this.selectedTrainingId=availableDefault(index?.default_training_id || index?.default_id);
+    this.gameNetworks=copy(this.trainingNetworks);
+    this.selectedGameId=availableDefault(index?.default_game_id || index?.default_id);
     this.starting=false;
   }
 
   async request(path,options={}) {
     if(path==='/api/status') return this.state;
-    if(path==='/api/model') return this.model;
+    if(path==='/api/model' || path.startsWith('/api/model?')) {
+      const id=new URLSearchParams(path.split('?')[1] || '').get('network_id') || this.selectedGameId;
+      const network=this.gameNetworks.find(candidate=>candidate.id===id);
+      if(!network) throw new Error('Choose an available opponent network.');
+      // Only frozen catalog weights are playable. Teacher data and visitor
+      // training outputs never enter this route, including after load failures.
+      return copy(await readJSON(network.model_url));
+    }
     if(path.startsWith('/api/oracle?')) {
       this.teaching ||= await readJSON('/data/teaching.json');
       const key=new URLSearchParams(path.split('?')[1]).get('board');
@@ -70,7 +80,7 @@ class HostedTrainer {
       this.archive=null;
       this.state={...copy(this.publishedStatus),status:'starting',run_id:`browser-${body.seed}-${Date.now()}`,history:[],events:[],candidates:[],evaluation:{},selection:null,
         architecture:parent.architecture,parameter_count:parent.parameter_count,training_network:copy(trainingNetwork),
-        recipe_note:'Visitor-local, single-branch continuation: three phases of 512 Adam updates, native collection, targeted review and protected replay. All reachable states are teaching data. This is finite-domain coverage, not a fresh held-out test. The playable game keeps the published compact champion; trained weights are saved only in downloadable experiment evidence.'};
+        recipe_note:'Visitor-local, single-branch continuation: three phases of 512 Adam updates, native collection, targeted review and protected replay. All reachable states are teaching data. This is finite-domain coverage, not a fresh held-out test. Your selected opponent stays frozen; trained weights are saved only in downloadable experiment evidence.'};
       this.worker=new Worker(new URL('./training-worker.js',import.meta.url),{type:'module'});
       this.worker.onmessage=event=>{
         const message=event.data;
@@ -78,8 +88,8 @@ class HostedTrainer {
         if(message.type==='complete') {
           this.state=message.status;
           this.archive=message.archive;
-          // Experiments may use a larger architecture than the compact public
-          // champion. Their exports belong in the run download, never the game.
+          // Experimental exports belong in the run download. Gameplay keeps
+          // the independently selected frozen catalog network.
           this.worker?.terminate();this.worker=null;
         }
       };

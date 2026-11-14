@@ -2,14 +2,14 @@
   "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
   "access_mode": "public",
   "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
-  "site_version": 3,
-  "site_source_commit": "0f9537432f7065bbf4a03615e82498652992c9ee",
-  "site_deployment_id": "appgdep_6af7b2ece2048191a011d0e2caa96dca",
+  "site_version": 4,
+  "site_source_commit": "e15c79701fc60a0d7270bbc52fe4780ae1cc4c2e",
+  "site_deployment_id": "appgdep_6af7be4ae444819196c5413ec0a894c9",
   "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
-  "model_sha256": "9b3b98f4b995c0c434bdd248ca2042844485379d0f999751b7e0f40296277632",
-  "model_parameters": 38,
-  "coefficient_precision": "float16-values",
-  "coefficient_payload_bytes": 76,
+  "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+  "model_parameters": 74,
+  "coefficient_precision": "float32",
+  "coefficient_payload_bytes": 296,
   "arithmetic": "JavaScript double",
   "forward_passes_per_move": 8,
   "training_networks": [
@@ -18,17 +18,17 @@
     74,
     6537
   ],
-  "ordinary_tests_passed": 48,
+  "ordinary_tests_passed": 50,
   "live_browser_verified": true,
   "qualification": {
     "no_loss_x": true,
     "no_loss_o": true,
-    "optimal_decisions": 3888,
+    "optimal_decisions": 4520,
     "total_decisions": 4520,
     "browser_action_mismatches": 0
   },
   "minimality_scope": "Smallest verified result found in bounded registered search; no global minimality proof.",
-  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_4b2f8474026c8191a5cce33db317b282",
+  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_03c40b7f8e688191a6101645abe8e2c6",
   "compact_fully_optimal_choice": {
     "id": "perfect-compact",
     "run_id": "perfect-optimal-74",
@@ -54,5 +54,24 @@
     "solver_fallback": false,
     "global_minimum_proven": false
   },
-  "live_browser_evidence": "docs/perfect-network-preview.jpg"
+  "live_browser_evidence": "docs/opponent-choice-preview.jpg",
+  "default_game_network_id": "perfect-compact",
+  "gameplay_networks": [
+    38,
+    123,
+    74,
+    6537
+  ],
+  "gameplay_choices": {
+    "default": "perfect-compact",
+    "network_ids": [
+      "compact",
+      "dense",
+      "perfect-compact",
+      "original"
+    ],
+    "changing_opponent_starts_new_game": true,
+    "independent_training_selection": true,
+    "visitor_training_never_replaces_opponent": true
+  }
 }

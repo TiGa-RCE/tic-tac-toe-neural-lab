@@ -1,0 +1,34 @@
+{
+  "verified_at": "2026-11-14T01:51:18.078024+00:00",
+  "site_version": 4,
+  "site_source_commit": "e15c79701fc60a0d7270bbc52fe4780ae1cc4c2e",
+  "deployed_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "default_opponent": {
+    "id": "perfect-compact",
+    "parameters": 74,
+    "checkpoint": "perfect-74-float32"
+  },
+  "local_browser_observed": {
+    "all_four_choices_load_distinct_checkpoints": true,
+    "training_selection_independent": true,
+    "network_moves_as_x": true,
+    "network_moves_as_o": true
+  },
+  "public_browser_observed": {
+    "fresh_visit_default_74": true,
+    "switch_to_38": true,
+    "return_to_74": true,
+    "correct_selected_model_coverage": true
+  },
+  "ordinary_tests_passed": 50,
+  "no_training_performed": true,
+  "qualified_model_unchanged": true,
+  "source_hashes": {
+    "web/app.js": "a37bb7fbd427f57f9ffc3eeb444e6798ff20249c33e5e9a1015f88900d03e3b9",
+    "web/hosted.js": "9c478bd8899cffcd552d46f170f09e9e6357dced8ac34d2513885c692d43ef81",
+    "web/network.js": "fd9d7241f48e68d908666176f796443aa0244ced91f332f5b9e232172ff661fd",
+    "site/dist/data/model.json": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+    "site/dist/data/networks.json": "31ade41897aa808892ae88fe755f6ce90be9ec1fc2986bba2e1caf3b095b25a0"
+  },
+  "screenshot": "docs/opponent-choice-preview.jpg"
+}

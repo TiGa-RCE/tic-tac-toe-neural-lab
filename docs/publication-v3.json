@@ -1,0 +1,58 @@
+{
+  "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "access_mode": "public",
+  "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
+  "site_version": 3,
+  "site_source_commit": "0f9537432f7065bbf4a03615e82498652992c9ee",
+  "site_deployment_id": "appgdep_6af7b2ece2048191a011d0e2caa96dca",
+  "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
+  "model_sha256": "9b3b98f4b995c0c434bdd248ca2042844485379d0f999751b7e0f40296277632",
+  "model_parameters": 38,
+  "coefficient_precision": "float16-values",
+  "coefficient_payload_bytes": 76,
+  "arithmetic": "JavaScript double",
+  "forward_passes_per_move": 8,
+  "training_networks": [
+    38,
+    123,
+    74,
+    6537
+  ],
+  "ordinary_tests_passed": 48,
+  "live_browser_verified": true,
+  "qualification": {
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "optimal_decisions": 3888,
+    "total_decisions": 4520,
+    "browser_action_mismatches": 0
+  },
+  "minimality_scope": "Smallest verified result found in bounded registered search; no global minimality proof.",
+  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_4b2f8474026c8191a5cce33db317b282",
+  "compact_fully_optimal_choice": {
+    "id": "perfect-compact",
+    "run_id": "perfect-optimal-74",
+    "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+    "parameters": 74,
+    "architecture": [
+      9,
+      4,
+      8
+    ],
+    "reference_logit_zero": true,
+    "forward_passes_per_move": 8,
+    "coefficient_precision": "float32",
+    "coefficient_payload_bytes": 296,
+    "optimal_decisions": 4520,
+    "total_decisions": 4520,
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "browser_action_mismatches": 0,
+    "max_browser_logit_error": 1.4210854715202004e-14,
+    "worker_training_updates_verified": 1536,
+    "search_trials": 54,
+    "solver_fallback": false,
+    "global_minimum_proven": false
+  },
+  "live_browser_evidence": "docs/perfect-network-preview.jpg"
+}

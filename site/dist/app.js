@@ -12,6 +12,8 @@ let latestStatus = null;
 let requestBusy = false;
 let polling = false;
 let gameModel = null;
+let gameNetworkId = null;
+let pendingGameNetworkId = null;
 let board = Array(9).fill(0);
 let humanSide = 1;
 let thinking = false;
@@ -161,7 +163,25 @@ function renderTrainingChoices() {
       ? `Training parent: independently optimal on all ${number(selected.total)} reachable decision boards.`
       : `Training parent: ${number(selected.optimal_count)} / ${number(selected.total)} optimal decisions (${percent(selected.optimal_count/selected.total)}).${selected.no_loss_from_empty===true?' Independently non-losing as X and O from empty.':''}`
     : 'No exhaustive optimal-decision count is recorded for this training parent.';
-  $('training-network-note').textContent=`${coverage} This choice trains only the browser experiment. The playable game keeps the published ${number(hosted.publishedModel.parameter_count)}-parameter champion; experiment weights are available in the run download.`;
+  $('training-network-note').textContent=`${coverage} This choice trains only the browser experiment. Choose your opponent separately in the play panel; experiment weights are available in the run download.`;
+}
+
+function renderGameChoices() {
+  $('game-network-label').hidden=!hosted;
+  $('game-network-note').hidden=!hosted;
+  if(!hosted) return;
+  const networks=hosted.gameNetworks;
+  const signature=JSON.stringify(networks);
+  if($('game-network').dataset.catalog!==signature) {
+    $('game-network').innerHTML=networks.map(network=>{
+      const coverage=network.optimal_count===network.total && network.total>0?'100% optimal':finite(network.optimal_count)&&network.total>0?`${percent(network.optimal_count/network.total)} optimal`:'Coverage not recorded';
+      return `<option value="${escape(network.id)}">${escape(number(network.parameters))} coefficients · ${escape(coverage)} · ${escape(network.label || network.id)}</option>`;
+    }).join('');
+    $('game-network').dataset.catalog=signature;
+  }
+  $('game-network').value=(loadingGame?pendingGameNetworkId:null) || gameNetworkId || hosted.selectedGameId;
+  $('game-network').disabled=loadingGame;
+  $('game-network-note').textContent='Changing the opponent starts a new game. The selected weights stay fixed throughout play.';
 }
 
 function renderStatus(status) {
@@ -317,6 +337,7 @@ function policyProbabilities(logits, cells) {
 }
 
 function renderGame() {
+  renderGameChoices();
   const result=outcome(board);
   let probabilities=null,best=null;
   if(gameModel && result===null) {
@@ -336,16 +357,16 @@ function renderGame() {
   $('network-symbol').textContent=`Playing ${humanSide===1?'O':'X'}`;
   document.querySelector('.player-symbol.human').textContent=humanSide===1?'×':'○';
   document.querySelector('.player-symbol.neural').textContent=humanSide===1?'○':'×';
-  $('game-status').textContent=loadingGame?'Loading latest checkpoint…':!gameModel?'Waiting for a trained checkpoint':result!==null?(result===0?'A draw. Well played.':result===humanSide?'You won this game.':'The student wins this round.'):thinking?'The student is choosing…':currentPlayer()===humanSide?'Your turn. Pick a cell.':"The student's turn.";
+  $('game-status').textContent=loadingGame?'Loading selected network…':!gameModel?'Waiting for a trained checkpoint':result!==null?(result===0?'A draw. Well played.':result===humanSide?'You won this game.':'The student wins this round.'):thinking?'The student is choosing…':currentPlayer()===humanSide?'Your turn. Pick a cell.':"The student's turn.";
   $('checkpoint').textContent=gameModel?`${gameModel.checkpoint || 'Saved weights'}${gameModel.run_id?` · ${gameModel.run_id}`:''}`:'No model loaded';
   const symmetry=gameModel?.symmetry_average==='D4';
   const passes=symmetry?8:1;
   $('inference-work').hidden=!gameModel;
   $('inference-work').textContent=(symmetry?`${number(gameModel.parameter_count)} learned parameters; ${number(passes)} neural passes per move. The same weights score all rotations and reflections. `:`${number(passes)} neural forward pass per move. `)+(gameModel?.reference_logit_zero===true?'Eight learned readouts plus a fixed zero produce nine move scores. ':'')+(gameModel?.output_bias_orbits==='D4-corner-zero'?'Two learned readout biases are shared across edge and center positions; corner biases are fixed at zero. ':'')+(Number.isInteger(gameModel?.logit_round_decimals)?`Policy ties use ${gameModel.logit_round_decimals}-decimal score keys, then lowest cell index. `:'')+'No solver or tactical fallback.';
   $('inference-explanation').textContent=symmetry?'The same network scores eight rotations/reflections, maps scores back to the original cells and averages them. Occupied cells are masked; the highest legal neural score chooses the move.':'The student scores the nine cells in one forward pass. Occupied cells are masked; the highest legal policy score chooses the move.';
-  const publishedProof=hosted?.publishedStatus?.evaluation?.independent?.no_loss_from_empty;
-  $('play-proof').hidden=!publishedProof || !gameModel || gameModel.run_id!==hosted?.publishedModel?.run_id;
-  $('play-proof').textContent='Published checkpoint: independently verified no-loss as both X and O. Moves use only this frozen neural network.';
+  const proof=hosted?.gameNetworks.find(network=>network.id===gameNetworkId);
+  $('play-proof').hidden=!proof?.no_loss_from_empty || !gameModel;
+  $('play-proof').textContent=(proof?.perfect_policy?`Optimal on all ${number(proof.total)} reachable decision boards. `:proof?`${number(proof.optimal_count)} / ${number(proof.total)} optimal decisions. `:'')+'Independently verified no-loss as both X and O. Moves use only this frozen neural network.';
   $('export').disabled=!gameModel;
   $('new-game').disabled=loadingGame;
   $('teacher-note').hidden=!$('teacher-overlay').checked;
@@ -376,15 +397,20 @@ function advanceStudent(token) {
 
 async function newGame() {
   const token=++gameToken;
+  const requestedId=hosted?($('game-network').value || hosted.selectedGameId):null;
+  pendingGameNetworkId=requestedId;
+  showError('');
   thinking=false;loadingGame=true;oracle=null;board=Array(9).fill(0);humanSide=Number($('side').value);renderGame();
   try {
-    const model=await api('/api/model');
+    const model=await api(requestedId?`/api/model?network_id=${encodeURIComponent(requestedId)}`:'/api/model');
     if(token!==gameToken) return;
     predict(model,board);
     gameModel=model;
-  } catch(error) {if(!gameModel) showError(`No playable checkpoint yet. ${error.message}`);else showError(`Keeping the last loaded checkpoint: ${error.message}`);}
+    gameNetworkId=requestedId;
+    if(hosted) hosted.selectedGameId=requestedId;
+  } catch(error) {if(token===gameToken) {if(!gameModel) showError(`No playable checkpoint yet. ${error.message}`);else showError(`Keeping the last loaded checkpoint: ${error.message}`);}}
   finally {
-    if(token===gameToken) {loadingGame=false;renderGame();updateOracle();advanceStudent(token);}
+    if(token===gameToken) {loadingGame=false;pendingGameNetworkId=null;renderGame();updateOracle();advanceStudent(token);}
   }
 }
 
@@ -394,6 +420,7 @@ $('start').addEventListener('click',()=>{
   trainingAction('/api/train',{seed,mode:latestStatus?.model_available?'continue':'foundation',...(hosted?{network_id:$('training-network').value}:{})});
 });
 $('training-network').addEventListener('change',()=>{if(hosted) {hosted.selectedTrainingId=$('training-network').value;renderTrainingChoices();}});
+$('game-network').addEventListener('change',newGame);
 for(const action of ['pause','resume','stop']) $(action).addEventListener('click',()=>trainingAction('/api/control',{action}));
 $('new-game').addEventListener('click',newGame);
 $('side').addEventListener('change',newGame);

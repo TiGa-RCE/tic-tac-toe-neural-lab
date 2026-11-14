@@ -2,19 +2,19 @@
 
 **[Play the public ChatGPT Site](https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site)** · **[Source, weights and evidence](https://github.com/TiGa-RCE/tic-tac-toe-neural-lab)**
 
-The default game now uses **38 learned coefficients** — **99.42% fewer** than the original 6,537-parameter student. Its numeric coefficients pack into **76 bytes of IEEE binary16**; JSON metadata, geometry maps, and runtime code are additional. Inference uses ordinary JavaScript double arithmetic.
+The default game uses the **74-coefficient fully optimal network**: it chooses an optimal move on **all 4,520 reachable decision boards** and has a worst-case draw as both X and O against every possible opponent continuation. Its float32 coefficients pack into **296 bytes**; JSON metadata, fixed geometry, and runtime code are additional. Inference uses ordinary JavaScript double arithmetic.
 
-The same two-neuron network scores all eight rotations/reflections; mapped logits are averaged before occupied-cell masking and a declared numerical argmax rule. Eight learned readouts plus a fixed zero and two shared output biases eliminate redundant coefficients. **No solver, tactical feature, per-position move table, or fallback chooses a move during play.**
+The same four-neuron network scores all eight rotations/reflections; mapped logits are averaged before occupied-cell masking and a declared numerical argmax rule. Eight learned readouts plus a fixed zero and two shared output biases eliminate redundant coefficients. **No solver, tactical feature, per-position move table, or fallback chooses a move during play.**
 
-An independent verifier explored every possible opponent continuation from empty: the compact policy's worst case is **draw as X and draw as O**. It is optimal on 3,888/4,520 arbitrary decision boards (86.02%); no-loss from normal play is the acceptance requirement. The original perfect 6,537-parameter model remains preserved. A new **74-coefficient fully optimal network** achieves **4,520/4,520**, including arbitrary reachable positions, and is available in the training selector. Its float32 coefficient payload is **296 bytes**. See [PERFECT.md](PERFECT.md) for the stronger acceptance gate, 54 additional search trials, and independent qualification.
+The **Opponent network** menu lets you choose the 74-coefficient fully optimal model, the earlier 38-coefficient shared model, the 123-parameter dense model, or the original 6,537-parameter perfect model. Changing the opponent starts a new game with that frozen network. The 38-coefficient model remains unbeatable from empty and is optimal on 3,888/4,520 arbitrary decision boards (86.02%).
 
-The 38-coefficient policy is the **smallest verified no-loss result found in the earlier 71 bounded training trials plus algebraic folding**, not a proof of a global minimum. See [COMPRESSION.md](COMPRESSION.md) for smaller failed attempts, the eight-pass compute tradeoff, and the preserved strict-parity failure.
+The 74-coefficient model is the **smallest fully optimal result verified in 54 bounded search trials**, not a proof of a global minimum. See [PERFECT.md](PERFECT.md) for the recipe and independent qualification. The earlier 38-coefficient model is the **smallest verified no-loss result found in the earlier 71 bounded training trials plus algebraic folding**. See [COMPRESSION.md](COMPRESSION.md) for that search and its preserved strict-parity failure.
 
 ## Public dashboard
 
 Play either side, inspect policy probabilities, explicitly compare with the teacher, download weights, and inspect actual phase curves, checkpoint repairs/breaks, and qualification results.
 
-The dashboard shows **saved published evidence**, including the complete size search. The **Training network** menu offers the 38-coefficient shared network, the new **74-coefficient compact fully optimal network**, the 123-parameter one-pass dense model, and the original 6,537-parameter perfect model. Each choice displays its all-board optimality coverage. Selection changes the visitor experiment only; gameplay stays on the certified compact champion. **Train in this browser** starts real CPU training in an isolated Web Worker on the visitor's device: three phases of 512 Adam updates, native collection, targeted review, balanced retention, and parent-correct temperature-2 KL. Pause/resume/stop are cooperative; literal schedules and run evidence can be downloaded. Visitor runs do not modify the hosted baseline. The game retains the independently certified neural checkpoint throughout experimental training.
+The dashboard shows **saved published evidence** for the default network; the complete search receipts remain in this repository. The **Training network** menu offers the 38-coefficient shared network, the new **74-coefficient compact fully optimal network**, the 123-parameter one-pass dense model, and the original 6,537-parameter perfect model. Each choice displays its all-board optimality coverage. The training selection is independent of **Opponent network** and changes the visitor experiment only. **Train in this browser** starts real CPU training in an isolated Web Worker on the visitor's device: three phases of 512 Adam updates, native collection, targeted review, balanced retention, and parent-correct temperature-2 KL. Pause/resume/stop are cooperative; literal schedules and run evidence can be downloaded. Visitor runs do not modify the hosted baseline. The game retains the selected, independently certified neural checkpoint throughout experimental training.
 
 Teacher labels load only after explicit training or enabling the optional comparison overlay. Default gameplay loads only the neural weights and run summary, without fetching the teaching corpus. Policy probabilities are not win probabilities.
 
@@ -55,19 +55,19 @@ That original continuation retained all 6,537 parameters. The later [compression
 
 ## Evidence and reproduction
 
-Default no-loss compact export: `runs/compression-20261113-selected/`. New all-board-optimal compact export: `runs/perfect-optimal-74/`, selected by `runs/perfect-optimal-selection.json`; its 92-coefficient predecessor is preserved in `runs/perfect-optimal-92/`. Original perfect run: `runs/20261113T233235Z-7e5be6/`. It contains protocol/corpus, literal schedules, native traces, source snapshots, parent and all twelve branch checkpoints, selection seal, qualification receipt, `model.json`, independent fixtures, and portable parity. `browser-worker-verification.json` exercises the identical worker through a Node adapter: all 1,536 updates, pause/resume, and certified-incumbent preservation.
+Earlier no-loss compact export: `runs/compression-20261113-selected/`. Default all-board-optimal compact export: `runs/perfect-optimal-74/`, selected by `runs/perfect-optimal-selection.json`; its 92-coefficient predecessor is preserved in `runs/perfect-optimal-92/`. Original perfect run: `runs/20261113T233235Z-7e5be6/`. It contains protocol/corpus, literal schedules, native traces, source snapshots, parent and all twelve branch checkpoints, selection seal, qualification receipt, `model.json`, independent fixtures, and portable parity. `browser-worker-verification.json` exercises the identical worker through a Node adapter: all 1,536 updates, pause/resume, and certified-incumbent preservation.
 
 The new 74-coefficient choice also passed a complete 1,536-update browser-worker run with pause/resume; the certified 4,520/4,520 training parent was retained. See [PERFECT.md](PERFECT.md) and [VERIFICATION.md](VERIFICATION.md). Earlier machine paths in immutable historical receipts are provenance, not runtime requirements. Original smoke and split-study evidence remain preserved. The external Boundaries ZIP archives and unrelated user files are excluded.
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 build_site.py --run-dir runs/compression-20261113-selected --output site/dist
+python3 build_site.py --run-dir runs/perfect-optimal-74 --output site/dist
 ```
 
 The ordinary tests do not load learned tensors. Deliberate requalification should use the supported local guard:
 
 ```bash
-~/.local/bin/memory-run --kind model --peak-bytes 536870912 -- python3 verify_export.py --model runs/compression-20261113-selected/model.json --output recheck.json
+~/.local/bin/memory-run --kind model --peak-bytes 536870912 -- python3 verify_export.py --model runs/perfect-optimal-74/model.json --output recheck.json
 ```
 
 The static Site needs no server-side secrets, account connectors, training service, or connection to the original Mac.

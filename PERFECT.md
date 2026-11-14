@@ -2,7 +2,7 @@
 
 The selected network has **74 learned float32 coefficients**, with a **296-byte numeric payload**, and chooses an optimal action on **all 4,520 reachable nonterminal tic-tac-toe boards**. Independent exhaustive qualification also confirms a worst-case draw from empty as both X and O. The browser implementation selects exactly the same actions on all 4,520 fixtures, with maximum absolute logit error `1.4210854715202004e-14` at the unchanged `1e-9` tolerance.
 
-This is the **smallest fully optimal network verified in this retained, bounded search**. It is not a global minimum proof. The earlier 38-coefficient network remains the default game: it is unbeatable from empty but optimal on 3,888/4,520 arbitrary decision boards. The new model is an additional **Compact fully optimal network** choice in the public dashboard's **Training network** menu. The original 6,537-parameter perfect network and the intermediate 92-coefficient perfect export remain preserved.
+This is the **smallest fully optimal network verified in this retained, bounded search**. It is not a global minimum proof. The 74-coefficient model is the default opponent. The **Opponent network** menu offers all four certified networks; changing that choice starts a new game. The earlier 38-coefficient network remains available: it is unbeatable from empty but optimal on 3,888/4,520 arbitrary decision boards. The independent **Training network** menu also offers the **Compact fully optimal network** for browser experiments. The original 6,537-parameter perfect network and the intermediate 92-coefficient perfect export remain preserved.
 
 ## Network and gameplay
 
@@ -82,7 +82,7 @@ Ordinary metadata/unit checks and the static build are:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 build_site.py --run-dir runs/compression-20261113-selected --output site/dist
+python3 build_site.py --run-dir runs/perfect-optimal-74 --output site/dist
 ```
 
-The builder adds the independently qualified compact perfect choice to the catalog while preserving the 38-coefficient default game. See [README.md](README.md) for local serving and browser training, and [COMPRESSION.md](COMPRESSION.md) for the earlier no-loss search.
+The builder publishes the independently qualified 74-coefficient network as the default game and keeps all four certified choices in the catalog. See [README.md](README.md) for local serving and browser training, and [COMPRESSION.md](COMPRESSION.md) for the earlier no-loss search.
