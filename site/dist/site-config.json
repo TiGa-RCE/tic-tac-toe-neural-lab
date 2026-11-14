@@ -2,8 +2,8 @@
   "mode": "hosted",
   "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
   "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
-  "run_id": "perfect-sparse-53",
-  "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
+  "run_id": "perfect-sparse-49-refined",
+  "model_sha256": "2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d",
   "certification_url": "./data/certification.json",
   "training_scope": "All 4,520 reachable decision positions are supervised; finite-domain coverage, not a held-out generalization experiment.",
   "network_catalog_url": "/data/networks.json"

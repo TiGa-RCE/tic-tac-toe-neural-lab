@@ -1,11 +1,14 @@
 {
-  "run_id": "perfect-sparse-53",
-  "parameter_count": 53,
+  "run_id": "perfect-sparse-49-refined",
+  "previous_run_ids": [
+    "perfect-sparse-53"
+  ],
+  "parameter_count": 49,
   "optimal_count": 4520,
   "total": 4520,
-  "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
+  "model_sha256": "2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d",
   "coefficient_precision": "float16",
-  "coefficient_payload_bytes": 106,
-  "qualification": "Independent all-board optimality, both-side adversarial no-loss, exact browser-action parity.",
-  "minimality_scope": "Smallest verified result in the retained bounded searches; no global minimality proof."
+  "coefficient_payload_bytes": 98,
+  "qualification": "Independent all-board optimality, both-side adversarial no-loss, exact browser actions.",
+  "minimality_scope": "Smallest verified in retained bounded searches; no global network minimality proof."
 }

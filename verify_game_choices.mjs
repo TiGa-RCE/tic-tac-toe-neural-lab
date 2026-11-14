@@ -2,8 +2,8 @@
 import assert from 'node:assert/strict';
 import {detectHosting} from './web/hosted.js';
 
-const ids=['compact','dense','perfect-compact','original','perfect-sparse'];
-const counts=[38,123,74,6537,53];
+const ids=['compact','dense','perfect-compact','original','perfect-sparse','history-perfect-sparse-53'];
+const counts=[38,123,74,6537,49,53];
 const models=Object.fromEntries(ids.map((id,i)=>[id,{
   checkpoint:id,run_id:`frozen-${id}`,parameter_count:counts[i],
   architecture:[9,1,9],encoding:'relative-signed',layers:[{weights:[[i]],bias:[i]}],
@@ -12,7 +12,7 @@ const catalog=ids.map((id,i)=>({id,label:id,parameters:counts[i],model_url:`/dat
   no_loss_from_empty:true,perfect_policy:i>1,optimal_count:i>1?4520:3800,total:4520}));
 const fixtures={
   '/site-config.json':{mode:'hosted'},
-  '/data/status.json':{status:'completed',model_available:true,parameter_count:53,evaluation:{independent:{no_loss_from_empty:true}}},
+  '/data/status.json':{status:'completed',model_available:true,parameter_count:49,evaluation:{independent:{no_loss_from_empty:true}}},
   '/data/model.json':models['perfect-sparse'],
   '/data/networks.json':{default_id:'perfect-sparse',default_game_id:'perfect-sparse',default_training_id:'perfect-sparse',networks:catalog},
   ...Object.fromEntries(ids.map(id=>[`/data/networks/${id}.json`,models[id]])),

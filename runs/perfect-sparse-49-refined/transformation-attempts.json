@@ -1,0 +1,1 @@
+[{"precision":"float16","checkpoint":"sparse-perfect-49-float16","parameters":49,"optimal_count":4520,"perfect_policy":true,"no_loss_from_empty":true,"portable":{"positions":4520,"action_mismatches":0,"max_logit_error":2.220446049250313e-16,"tolerance":1e-09,"optimal_count":4520,"passed":true},"model_sha256":"2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d"}]

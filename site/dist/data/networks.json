@@ -88,6 +88,33 @@
       "id": "perfect-sparse",
       "label": "Sparse fully optimal network",
       "model_url": "/data/networks/perfect-sparse.json",
+      "parameters": 49,
+      "architecture": [
+        9,
+        4,
+        8
+      ],
+      "encoding": "relative-signed",
+      "model_sha256": "2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d",
+      "symmetry_average": "D4",
+      "forward_passes_per_move": 8,
+      "reference_logit_zero": true,
+      "output_bias_orbits": "D4-corner-zero",
+      "coefficient_precision": "float16",
+      "coefficient_storage": "sparse-fixed-v1",
+      "structural_zero_slots": 24,
+      "fixed_unit_slots": 1,
+      "coefficient_payload_bytes": 98,
+      "no_loss_from_empty": true,
+      "perfect_policy": true,
+      "optimal_count": 4520,
+      "total": 4520,
+      "certification_url": "/data/networks/perfect-sparse-certification.json"
+    },
+    {
+      "id": "history-perfect-sparse-53",
+      "label": "Earlier sparse fully optimal network",
+      "model_url": "/data/networks/history-perfect-sparse-53.json",
       "parameters": 53,
       "architecture": [
         9,
@@ -109,7 +136,7 @@
       "perfect_policy": true,
       "optimal_count": 4520,
       "total": 4520,
-      "certification_url": "/data/networks/perfect-sparse-certification.json"
+      "certification_url": "/data/networks/history-perfect-sparse-53-certification.json"
     },
     {
       "id": "original",

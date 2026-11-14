@@ -1,0 +1,109 @@
+{
+  "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "access_mode": "public",
+  "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
+  "site_version": 5,
+  "site_source_commit": "277d45821c7f984faad9df3a9d348d6200952a2f",
+  "site_deployment_id": "appgdep_6af7c55d517c81919dbb6432cafc8e84",
+  "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
+  "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
+  "model_parameters": 53,
+  "coefficient_precision": "float16",
+  "coefficient_payload_bytes": 106,
+  "arithmetic": "JavaScript double",
+  "forward_passes_per_move": 8,
+  "training_networks": [
+    38,
+    123,
+    74,
+    53,
+    6537
+  ],
+  "ordinary_tests_passed": 60,
+  "live_browser_verified": true,
+  "qualification": {
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "optimal_decisions": 4520,
+    "total_decisions": 4520,
+    "browser_action_mismatches": 0
+  },
+  "minimality_scope": "Smallest verified result found in bounded registered search; no global minimality proof.",
+  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_ff6047e8af688191b42d8b136752000c",
+  "compact_fully_optimal_choice": {
+    "id": "perfect-compact",
+    "run_id": "perfect-optimal-74",
+    "model_sha256": "f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7",
+    "parameters": 74,
+    "architecture": [
+      9,
+      4,
+      8
+    ],
+    "reference_logit_zero": true,
+    "forward_passes_per_move": 8,
+    "coefficient_precision": "float32",
+    "coefficient_payload_bytes": 296,
+    "optimal_decisions": 4520,
+    "total_decisions": 4520,
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "browser_action_mismatches": 0,
+    "max_browser_logit_error": 1.4210854715202004e-14,
+    "worker_training_updates_verified": 1536,
+    "search_trials": 54,
+    "solver_fallback": false,
+    "global_minimum_proven": false
+  },
+  "live_browser_evidence": "docs/sparse-network-preview.jpg",
+  "default_game_network_id": "perfect-sparse",
+  "gameplay_networks": [
+    38,
+    123,
+    74,
+    53,
+    6537
+  ],
+  "gameplay_choices": {
+    "default": "perfect-sparse",
+    "network_ids": [
+      "compact",
+      "dense",
+      "perfect-compact",
+      "perfect-sparse",
+      "original"
+    ],
+    "changing_opponent_starts_new_game": true,
+    "independent_training_selection": true,
+    "visitor_training_never_replaces_opponent": true
+  },
+  "coefficient_storage": "sparse-fixed-v1",
+  "structural_zero_slots": 20,
+  "fixed_unit_slots": 1,
+  "sparse_fully_optimal_choice": {
+    "id": "perfect-sparse",
+    "run_id": "perfect-sparse-53",
+    "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
+    "parameters": 53,
+    "architecture": [
+      9,
+      4,
+      8
+    ],
+    "coefficient_precision": "float16",
+    "coefficient_payload_bytes": 106,
+    "structural_zero_slots": 20,
+    "fixed_unit_slots": 1,
+    "numeric_payload_excludes": "Structural positions, JSON metadata, fixed geometry and runtime code.",
+    "optimal_decisions": 4520,
+    "total_decisions": 4520,
+    "no_loss_x": true,
+    "no_loss_o": true,
+    "browser_action_mismatches": 0,
+    "max_browser_logit_error": 2.220446049250313e-16,
+    "worker_training_updates_verified": 1536,
+    "worker_preserves_structural_coefficients": true,
+    "solver_fallback": false,
+    "global_minimum_proven": false
+  }
+}

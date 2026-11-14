@@ -1,0 +1,44 @@
+{
+  "verified_at": "2026-11-14T04:55:03.599396+00:00",
+  "site_version": 6,
+  "site_source_commit": "b1d06da29a7e9ea5b5b649ac550c6f6c787da653",
+  "deployed_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
+  "default_opponent": "perfect-sparse",
+  "parameters": 49,
+  "numeric_payload_bytes": 98,
+  "structural_zeros": 24,
+  "fixed_units": 1,
+  "global_minimum_proven": false,
+  "local_browser_observed": {
+    "network_moves_as_x": true,
+    "network_moves_as_o": true,
+    "old_53_choice_loads": true,
+    "training_choice_independent": true
+  },
+  "public_browser_observed": {
+    "fresh_visit_defaults_to_49": true,
+    "all_six_choices_present": true,
+    "old_53_choice_loads": true,
+    "return_to_49": true,
+    "correct_coverage_and_storage_disclosure": true
+  },
+  "ordinary_tests_passed": 62,
+  "worker_verification": "runs/perfect-sparse-49-refined/browser-worker-verification.json",
+  "qualification": "runs/perfect-sparse-49-refined/qualification-consumption.json",
+  "search_attempts": {
+    "greedy_head_b": 105,
+    "pruning_d": 60,
+    "masked_polish_f": 28,
+    "iterative_head_c": 260,
+    "masked_polish_g": 6,
+    "margin_refinement": 1
+  },
+  "source_hashes": {
+    "web/app.js": "57d08847b797910b62d25a8c2770fc5d2b2e0c366fd18d9ac91212c77438b610",
+    "web/network.js": "4d36d8f56458643b4829b32f49518c8aaa0f4b96bea6d90319e3120847b45f93",
+    "web/training-worker.js": "4ef04c415547db44b79fa855b8aa72bfc111dfb10a0bed47f7e2b1835216f100",
+    "site/dist/data/model.json": "2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d",
+    "site/dist/data/networks.json": "5c8d9df2d58944e08823fa597f4cd5d12bbe5e3265e9832373623353b0347f7c"
+  },
+  "screenshot": "docs/further-network-49-preview.jpg"
+}

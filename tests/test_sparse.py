@@ -308,9 +308,10 @@ class SparsePerfectArtifactTests(unittest.TestCase):
 
 
 class HistoricalSparseScopeTests(unittest.TestCase):
-    def test_existing_74_and_38_models_are_unchanged(self):
+    def test_existing_74_53_and_38_models_are_unchanged(self):
         for name, expected in (
             ('perfect-optimal-74', 'f2126224b52abde726908257a1faa918bf84247601f799f31876c64e2443f9f7'),
+            ('perfect-sparse-53', '22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c'),
             ('compression-20261113-selected', '9b3b98f4b995c0c434bdd248ca2042844485379d0f999751b7e0f40296277632'),
         ):
             with self.subTest(run=name):

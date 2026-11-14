@@ -36,12 +36,28 @@ def build(run, output, repository_url, site_url):
         if Path(name).name!=name or name in ('','.','..'):raise ValueError('Perfect model registry must contain a run name, not a path.')
         perfect_run=ROOT/'runs'/name
     sparse_run=None
+    sparse_history=[]
     sparse_index=ROOT/'runs/sparse-perfect-selection.json'
     if sparse_index.exists():
-        name=json.loads(sparse_index.read_text())['run_id']
-        if Path(name).name!=name or name in ('','.','..'):raise ValueError('Sparse model registry must contain a run name, not a path.')
+        sparse_registry=json.loads(sparse_index.read_text())
+        name=sparse_registry['run_id']
+        def sparse_name(value):
+            if (not isinstance(value,str) or Path(value).name!=value
+                    or value in ('','.','..') or '\\' in value):
+                raise ValueError('Sparse model registry must contain a run name, not a path.')
+            return value
+        name=sparse_name(name)
         sparse_run=ROOT/'runs'/name
         if not (sparse_run/'model.json').exists():raise ValueError('The registered sparse perfect model is missing.')
+        previous=sparse_registry.get('previous_run_ids',[])
+        if not isinstance(previous,list):raise ValueError('Sparse previous_run_ids must be a list of unique run names.')
+        previous=[sparse_name(value) for value in previous]
+        if len(set(previous))!=len(previous) or name in previous:
+            raise ValueError('Sparse previous_run_ids must be unique and exclude the selected run.')
+        for previous_name in previous:
+            folder=ROOT/'runs'/previous_name
+            if not (folder/'model.json').exists():raise ValueError('A registered historical sparse perfect model is missing.')
+            sparse_history.append(('history-'+previous_name,'Earlier sparse fully optimal network',folder))
     compact_run=ROOT/'runs/compression-20261113-selected'
     if not (compact_run/'model.json').exists():compact_run=run
     choices=[('compact','Smallest verified shared network',compact_run),
@@ -49,6 +65,7 @@ def build(run, output, repository_url, site_url):
              ('perfect-compact','Compact fully optimal network',perfect_run),
              ('original','Original perfect network',ROOT/'runs/20261113T233235Z-7e5be6')]
     if sparse_run is not None:choices.insert(3,('perfect-sparse','Sparse fully optimal network',sparse_run))
+    if sparse_history:choices[4:4]=sparse_history
     seen=set()
     model_dir=data/'networks';model_dir.mkdir(exist_ok=True)
     for identifier,label,folder in choices:
@@ -57,11 +74,12 @@ def build(run, output, repository_url, site_url):
         sha=hashlib.sha256((folder/'model.json').read_bytes()).hexdigest()
         qualification=json.loads((folder/'independent-verification.json').read_text())
         parity=json.loads((folder/'portable-verification.json').read_text())
-        if identifier in ('perfect-compact','perfect-sparse') and not (qualification.get('perfect_policy') is True and
+        if (identifier in ('perfect-compact','perfect-sparse') or identifier.startswith('history-')) and not (qualification.get('perfect_policy') is True and
                 qualification.get('optimal_count')==4520 and qualification.get('total')==4520 and
                 qualification.get('no_loss_from_empty') is True and parity.get('passed') is True and
                 parity.get('action_mismatches')==0 and parity.get('optimal_count')==4520):
-            kind='compact perfect choice' if identifier=='perfect-compact' else 'sparse perfect choice'
+            kind=('compact perfect choice' if identifier=='perfect-compact' else
+                  'historical sparse perfect choice' if identifier.startswith('history-') else 'sparse perfect choice')
             raise ValueError(f'The {kind} must independently pass all 4,520 boards and exact browser actions.')
         if sha in seen:continue
         seen.add(sha)

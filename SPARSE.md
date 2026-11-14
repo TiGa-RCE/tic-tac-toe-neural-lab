@@ -1,10 +1,12 @@
 # Further compression with explicit sparse coefficients
 
+This document preserves the **74-to-53 coefficient study**. The current 49-coefficient default and the subsequent search are documented in [SPARSE-FOLLOWUP.md](SPARSE-FOLLOWUP.md). The 53-coefficient model and its original evidence remain selectable and unchanged.
+
 This follow-up searches below the preserved 74-coefficient network while keeping the same acceptance requirement: every one of the 4,520 reachable decision boards must receive an optimal neural action, and the exact deployed browser implementation must agree with independent inference. All boards are deliberate teaching data; this is complete finite-domain coverage, with no held-out generalization claim or global minimum proof.
 
-The selected network has **53 learned float16 coefficients**, a **106-byte numeric payload**, and four tanh hidden neurons. It is independently optimal on **4,520/4,520 boards**, with a worst-case draw as X and O. Actual browser inference has **zero action mismatches** and maximum raw-logit error `2.220446049250313e-16` under the unchanged `1e-9` tolerance. It is the new default opponent; the 74-coefficient network and every earlier choice remain available.
+This study selected **53 learned float16 coefficients**, a **106-byte numeric payload**, and four tanh hidden neurons. It is independently optimal on **4,520/4,520 boards**, with a worst-case draw as X and O. Actual browser inference has **zero action mismatches** and maximum raw-logit error `2.220446049250313e-16` under the unchanged `1e-9` tolerance. It became the default at that stage and remains available alongside the 74-coefficient network and every earlier choice.
 
-The selected export is named by [`runs/sparse-perfect-selection.json`](runs/sparse-perfect-selection.json). The original [74-coefficient study](PERFECT.md), its frozen model, and all previous network choices remain available.
+The current export is named by [`runs/sparse-perfect-selection.json`](runs/sparse-perfect-selection.json); the original 53-coefficient result is retained in [`runs/perfect-sparse-53/`](runs/perfect-sparse-53/). The original [74-coefficient study](PERFECT.md), its frozen model, and all previous network choices remain available.
 
 ## What the coefficient count means
 
@@ -40,9 +42,9 @@ The follow-up pruned one further hidden-layer coefficient and refit the remainin
 
 Search receipts are retained in `runs/perfect-pruning-a/`, `runs/perfect-pruning-b/`, `runs/perfect-pruning-c/`, `runs/perfect-optimal-polish-e/`, and `runs/perfect-sparse-head-a/`. Protocols bind source snapshots, teaching corpus, native traces and frozen schedules or constraints. Final export receipts bind the source model, sparse transformation, precision attempts, independent full-domain fixtures and exact browser parity. Failed smaller attempts remain part of the bounded evidence.
 
-The selected model SHA-256 is `22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c`. Its complete independent fixtures, portable parity, precision attempts and qualification consumption hashes are retained in [`runs/perfect-sparse-53/`](runs/perfect-sparse-53/). The selection registry binds this export without replacing the original dense perfect-model registry.
+The 53-coefficient model SHA-256 is `22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c`. Its complete independent fixtures, portable parity, precision attempts and qualification consumption hashes are retained in [`runs/perfect-sparse-53/`](runs/perfect-sparse-53/). The current selection registry preserves this model as history without replacing the original dense perfect-model registry.
 
-The identical browser training worker completed all **1,536 updates**, three 512-update phases at batch size 128, with pause/resume acknowledged. It retained 4,520/4,520 optimal coverage and the certified parent while preserving every structural zero and fixed unit. Its [`browser-worker-verification.json`](runs/perfect-sparse-53/browser-worker-verification.json) receipt binds both worker and inference source hashes. **60 ordinary tests pass**, including independent frozen evidence, sparse serialization, coefficient accounting, selection isolation and catalog rejection checks.
+The identical browser training worker completed all **1,536 updates**, three 512-update phases at batch size 128, with pause/resume acknowledged. It retained 4,520/4,520 optimal coverage and the certified parent while preserving every structural zero and fixed unit. Its [`browser-worker-verification.json`](runs/perfect-sparse-53/browser-worker-verification.json) receipt binds both worker and inference source hashes. At that stage **60 ordinary tests passed**, including independent frozen evidence, sparse serialization, coefficient accounting, selection isolation and catalog rejection checks; the further study extends those checks.
 
 Sparse finalization tests float16, float32 and float64 in registered order, selecting the first precision that passes the complete unchanged gate. Browser parity by itself is insufficient: independent optimality and no-loss qualification as both X and O must pass too. The public builder rejects an unqualified sparse choice before duplicate-model filtering.
 
@@ -50,7 +52,7 @@ Run ordinary metadata and interface checks without a model backend:
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 build_site.py --run-dir runs/perfect-sparse-53 --output site/dist
+python3 build_site.py --run-dir runs/perfect-sparse-49-refined --output site/dist
 ```
 
 On this workstation, admit storage before a new search and use the supported memory guard for deliberate training, inference or export qualification. Install `requirements-research.txt` for SciPy-based L-BFGS and linear programming; the original Adam trainers require NumPy. For example, preserve existing evidence and use a new run name:

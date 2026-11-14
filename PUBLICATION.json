@@ -2,24 +2,25 @@
   "site_url": "https://three-in-a-row-neural-lab.tiga-rce.chatgpt.site",
   "access_mode": "public",
   "site_project_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23",
-  "site_version": 5,
-  "site_source_commit": "277d45821c7f984faad9df3a9d348d6200952a2f",
-  "site_deployment_id": "appgdep_6af7c55d517c81919dbb6432cafc8e84",
+  "site_version": 6,
+  "site_source_commit": "b1d06da29a7e9ea5b5b649ac550c6f6c787da653",
+  "site_deployment_id": "appgdep_6af7e95ec1e081919c56750615ff8b4a",
   "repository_url": "https://github.com/TiGa-RCE/tic-tac-toe-neural-lab",
-  "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
-  "model_parameters": 53,
+  "model_sha256": "2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d",
+  "model_parameters": 49,
   "coefficient_precision": "float16",
-  "coefficient_payload_bytes": 106,
+  "coefficient_payload_bytes": 98,
   "arithmetic": "JavaScript double",
   "forward_passes_per_move": 8,
   "training_networks": [
     38,
     123,
     74,
+    49,
     53,
     6537
   ],
-  "ordinary_tests_passed": 60,
+  "ordinary_tests_passed": 62,
   "live_browser_verified": true,
   "qualification": {
     "no_loss_x": true,
@@ -29,7 +30,7 @@
     "browser_action_mismatches": 0
   },
   "minimality_scope": "Smallest verified result found in bounded registered search; no global minimality proof.",
-  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_ff6047e8af688191b42d8b136752000c",
+  "site_version_id": "appgprj_6af79d5edae08191a0fbf546fa40dd23~appgver_930cef8f4f7c8191bf05b74277fd7329",
   "compact_fully_optimal_choice": {
     "id": "perfect-compact",
     "run_id": "perfect-optimal-74",
@@ -55,12 +56,13 @@
     "solver_fallback": false,
     "global_minimum_proven": false
   },
-  "live_browser_evidence": "docs/sparse-network-preview.jpg",
+  "live_browser_evidence": "docs/further-network-49-preview.jpg",
   "default_game_network_id": "perfect-sparse",
   "gameplay_networks": [
     38,
     123,
     74,
+    49,
     53,
     6537
   ],
@@ -71,6 +73,7 @@
       "dense",
       "perfect-compact",
       "perfect-sparse",
+      "history-perfect-sparse-53",
       "original"
     ],
     "changing_opponent_starts_new_game": true,
@@ -78,21 +81,21 @@
     "visitor_training_never_replaces_opponent": true
   },
   "coefficient_storage": "sparse-fixed-v1",
-  "structural_zero_slots": 20,
+  "structural_zero_slots": 24,
   "fixed_unit_slots": 1,
   "sparse_fully_optimal_choice": {
     "id": "perfect-sparse",
-    "run_id": "perfect-sparse-53",
-    "model_sha256": "22af9dcaabff1439a0c11723fc7eb32e1767989789c58e2ae053960fc2a5301c",
-    "parameters": 53,
+    "run_id": "perfect-sparse-49-refined",
+    "model_sha256": "2f2eed519d197bb498cb80127d5ca22ff66257b635db0eaa426997c465bf1c2d",
+    "parameters": 49,
     "architecture": [
       9,
       4,
       8
     ],
     "coefficient_precision": "float16",
-    "coefficient_payload_bytes": 106,
-    "structural_zero_slots": 20,
+    "coefficient_payload_bytes": 98,
+    "structural_zero_slots": 24,
     "fixed_unit_slots": 1,
     "numeric_payload_excludes": "Structural positions, JSON metadata, fixed geometry and runtime code.",
     "optimal_decisions": 4520,
